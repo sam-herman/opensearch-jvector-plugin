@@ -168,10 +168,22 @@ opensearchplugin {
     name 'opensearch-jvector'
     // zip file name and plugin name in ${opensearch.plugin.name} read by OpenSearch when plugin loading
     description 'OpenSearch jVector plugin'
-    classname 'org.opensearch.knn.plugin.JVectorPlugin'
+    classname 'org.opensearch.knn.jvector.plugin.JVectorPlugin'
     extendedPlugins = ['lang-painless']
     licenseFile = rootProject.file('LICENSE.txt')
     noticeFile = rootProject.file('NOTICE.txt')
+}
+
+tasks.named("integTest").configure {
+    it.dependsOn(project.tasks.named("bundlePlugin"))
+}
+
+task release(type: Copy, group: 'build') {
+    dependsOn project.tasks.build
+    from(zipTree(project.tasks.bundlePlugin.outputs.files.getSingleFile()))
+    into "build/plugins/opensearch-jvector"
+    includeEmptyDirs = false
+    eachFile { it.path = it.path - "opensearch/" }
 }
 
 /*** End of plugin boiler plate code ***/
@@ -238,7 +250,7 @@ integTest {
 }
 
 testClusters.integTest {
-    testDistribution = "INTEG_TEST"
+    testDistribution = "ARCHIVE"
     systemProperty "java.security.policy", "file://${projectDir}/src/main/resources/plugin-security.policy"
 
     // This installs our plugin into the testClusters

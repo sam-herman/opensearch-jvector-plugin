@@ -31,11 +31,11 @@
 
 ## Credits and Acknowledgments
 
-This project uses two similarity search libraries to perform Approximate Nearest Neighbor Search: the Apache 2.0-licensed [Non-Metric Space Library](https://github.com/nmslib/nmslib/) and the MIT licensed [Faiss library](https://github.com/facebookresearch/faiss). Thank you to all who have contributed to those projects including Bilegsaikhan Naidan, Leonid Boytsov, Yury Malkov and David Novak for nmslib and Hervé Jégou, Matthijs Douze, Jeff Johnson and Lucas Hosseini for Faiss.
+This project uses two similarity search libraries to perform Approximate Nearest Neighbor Search: the Apache 2.0-licensed [Lucene](https://github.com/apache/lucene) and [jVector](https://github.com/jbellis/jvector).
 
 ## Code of Conduct
 
-This project has adopted the [Amazon Open Source Code of Conduct](CODE_OF_CONDUCT.md). For more information see the [Code of Conduct FAQ](https://aws.github.io/code-of-conduct-faq), or contact [opensource-codeofconduct@amazon.com](mailto:opensource-codeofconduct@amazon.com) with any additional questions or comments.
+This project has adopted the [Placeholder Open Source Code of Conduct](CODE_OF_CONDUCT.md). For more information see the [Code of Conduct FAQ](https://aws.github.io/code-of-conduct-faq), or contact [placeholder](mailto:placeholder) with any additional questions or comments.
 
 ## License
 
