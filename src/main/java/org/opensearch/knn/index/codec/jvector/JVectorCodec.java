@@ -9,7 +9,6 @@ import org.apache.lucene.codecs.CompoundFormat;
 import org.apache.lucene.codecs.FilterCodec;
 import org.apache.lucene.codecs.KnnVectorsFormat;
 import org.apache.lucene.codecs.lucene101.Lucene101Codec;
-import org.apache.lucene.codecs.perfield.PerFieldKnnVectorsFormat;
 
 public class JVectorCodec extends FilterCodec {
 

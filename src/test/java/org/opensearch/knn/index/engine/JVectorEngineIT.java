@@ -106,8 +106,8 @@ public class JVectorEngineIT extends KNNRestTestCase {
         float[] invalidQuery = new float[DIMENSION - 1];
         int validK = 1;
         expectThrows(
-                ResponseException.class,
-                () -> searchKNNIndex(INDEX_NAME, new KNNQueryBuilder(FIELD_NAME, invalidQuery, validK), validK)
+            ResponseException.class,
+            () -> searchKNNIndex(INDEX_NAME, new KNNQueryBuilder(FIELD_NAME, invalidQuery, validK), validK)
         );
     }
 
@@ -194,9 +194,9 @@ public class JVectorEngineIT extends KNNRestTestCase {
         createKnnIndexMappingWithJVectorEngine(DIMENSION, SpaceType.L2, VectorDataType.FLOAT);
 
         addKnnDocWithAttributes(
-                DOC_ID,
-                new float[] { 6.0f, 7.9f, 3.1f },
-                ImmutableMap.of(COLOR_FIELD_NAME, "red", TASTE_FIELD_NAME, "sweet")
+            DOC_ID,
+            new float[] { 6.0f, 7.9f, 3.1f },
+            ImmutableMap.of(COLOR_FIELD_NAME, "red", TASTE_FIELD_NAME, "sweet")
         );
         addKnnDocWithAttributes(DOC_ID_2, new float[] { 3.2f, 2.1f, 4.8f }, ImmutableMap.of(COLOR_FIELD_NAME, "green"));
         addKnnDocWithAttributes(DOC_ID_3, new float[] { 4.1f, 5.0f, 7.1f }, ImmutableMap.of(COLOR_FIELD_NAME, "red"));
@@ -212,22 +212,22 @@ public class JVectorEngineIT extends KNNRestTestCase {
     @SneakyThrows
     public void testQueryWithFilterMultipleShards() {
         XContentBuilder builder = XContentFactory.jsonBuilder()
-                .startObject()
-                .startObject(PROPERTIES_FIELD_NAME)
-                .startObject(FIELD_NAME)
-                .field(TYPE_FIELD_NAME, KNN_VECTOR_TYPE)
-                .field(DIMENSION_FIELD_NAME, DIMENSION)
-                .startObject(KNNConstants.KNN_METHOD)
-                .field(KNNConstants.NAME, DISK_ANN)
-                .field(KNNConstants.METHOD_PARAMETER_SPACE_TYPE, SpaceType.L2.getValue())
-                .field(KNNConstants.KNN_ENGINE, KNNEngine.JVECTOR.getName())
-                .endObject()
-                .endObject()
-                .startObject(INTEGER_FIELD_NAME)
-                .field(TYPE_FIELD_NAME, FILED_TYPE_INTEGER)
-                .endObject()
-                .endObject()
-                .endObject();
+            .startObject()
+            .startObject(PROPERTIES_FIELD_NAME)
+            .startObject(FIELD_NAME)
+            .field(TYPE_FIELD_NAME, KNN_VECTOR_TYPE)
+            .field(DIMENSION_FIELD_NAME, DIMENSION)
+            .startObject(KNNConstants.KNN_METHOD)
+            .field(KNNConstants.NAME, DISK_ANN)
+            .field(KNNConstants.METHOD_PARAMETER_SPACE_TYPE, SpaceType.L2.getValue())
+            .field(KNNConstants.KNN_ENGINE, KNNEngine.JVECTOR.getName())
+            .endObject()
+            .endObject()
+            .startObject(INTEGER_FIELD_NAME)
+            .field(TYPE_FIELD_NAME, FILED_TYPE_INTEGER)
+            .endObject()
+            .endObject()
+            .endObject();
         String mapping = builder.toString();
 
         createIndex(INDEX_NAME, Settings.builder().put("number_of_shards", 10).put("number_of_replicas", 0).put("index.knn", true).build());
@@ -239,14 +239,14 @@ public class JVectorEngineIT extends KNNRestTestCase {
 
         final float[] searchVector = { 6.0f, 7.0f, 3.0f };
         final Response response = searchKNNIndex(
-                INDEX_NAME,
-                new KNNQueryBuilder(
-                        FIELD_NAME,
-                        searchVector,
-                        1,
-                        QueryBuilders.boolQuery().must(QueryBuilders.rangeQuery("dateReceived").gte("2023-11-01"))
-                ),
-                10
+            INDEX_NAME,
+            new KNNQueryBuilder(
+                FIELD_NAME,
+                searchVector,
+                1,
+                QueryBuilders.boolQuery().must(QueryBuilders.rangeQuery("dateReceived").gte("2023-11-01"))
+            ),
+            10
         );
         final String responseBody = EntityUtils.toString(response.getEntity());
         final List<KNNResult> knnResults = parseSearchResponse(responseBody, FIELD_NAME);
@@ -257,22 +257,22 @@ public class JVectorEngineIT extends KNNRestTestCase {
     @SneakyThrows
     public void testQueryWithFilter_whenNonExistingFieldUsedInFilter_thenSuccessful() {
         XContentBuilder builder = XContentFactory.jsonBuilder()
-                .startObject()
-                .startObject(PROPERTIES_FIELD_NAME)
-                .startObject(FIELD_NAME)
-                .field(TYPE_FIELD_NAME, KNN_VECTOR_TYPE)
-                .field(DIMENSION_FIELD_NAME, DIMENSION)
-                .startObject(KNNConstants.KNN_METHOD)
-                .field(KNNConstants.NAME, DISK_ANN)
-                .field(KNNConstants.METHOD_PARAMETER_SPACE_TYPE, SpaceType.L2.getValue())
-                .field(KNNConstants.KNN_ENGINE, KNNEngine.JVECTOR.getName())
-                .endObject()
-                .endObject()
-                .startObject(INTEGER_FIELD_NAME)
-                .field(TYPE_FIELD_NAME, FILED_TYPE_INTEGER)
-                .endObject()
-                .endObject()
-                .endObject();
+            .startObject()
+            .startObject(PROPERTIES_FIELD_NAME)
+            .startObject(FIELD_NAME)
+            .field(TYPE_FIELD_NAME, KNN_VECTOR_TYPE)
+            .field(DIMENSION_FIELD_NAME, DIMENSION)
+            .startObject(KNNConstants.KNN_METHOD)
+            .field(KNNConstants.NAME, DISK_ANN)
+            .field(KNNConstants.METHOD_PARAMETER_SPACE_TYPE, SpaceType.L2.getValue())
+            .field(KNNConstants.KNN_ENGINE, KNNEngine.JVECTOR.getName())
+            .endObject()
+            .endObject()
+            .startObject(INTEGER_FIELD_NAME)
+            .field(TYPE_FIELD_NAME, FILED_TYPE_INTEGER)
+            .endObject()
+            .endObject()
+            .endObject();
         Map<String, Object> mappingMap = xContentBuilderToMap(builder);
         String mapping = builder.toString();
 
@@ -281,11 +281,11 @@ public class JVectorEngineIT extends KNNRestTestCase {
         Float[] vector = new Float[] { 2.0f, 4.5f, 6.5f };
 
         String documentAsString = XContentFactory.jsonBuilder()
-                .startObject()
-                .field(INTEGER_FIELD_NAME, 5)
-                .field(FIELD_NAME, vector)
-                .endObject()
-                .toString();
+            .startObject()
+            .field(INTEGER_FIELD_NAME, 5)
+            .field(FIELD_NAME, vector)
+            .endObject()
+            .toString();
 
         addKnnDoc(INDEX_NAME, DOC_ID, documentAsString);
 
@@ -297,30 +297,30 @@ public class JVectorEngineIT extends KNNRestTestCase {
 
         // use filter where nonexistent field is must, we should have no results
         QueryBuilder filterWithRequiredNonExistentField = QueryBuilders.boolQuery()
-                .must(QueryBuilders.rangeQuery(NON_EXISTENT_INTEGER_FIELD_NAME).gte(1));
+            .must(QueryBuilders.rangeQuery(NON_EXISTENT_INTEGER_FIELD_NAME).gte(1));
         Response searchWithRequiredNonExistentFiledInFilterResponse = searchKNNIndex(
-                INDEX_NAME,
-                new KNNQueryBuilder(FIELD_NAME, searchVector, k, filterWithRequiredNonExistentField),
-                k
+            INDEX_NAME,
+            new KNNQueryBuilder(FIELD_NAME, searchVector, k, filterWithRequiredNonExistentField),
+            k
         );
         List<KNNResult> resultsQuery1 = parseSearchResponse(
-                EntityUtils.toString(searchWithRequiredNonExistentFiledInFilterResponse.getEntity()),
-                FIELD_NAME
+            EntityUtils.toString(searchWithRequiredNonExistentFiledInFilterResponse.getEntity()),
+            FIELD_NAME
         );
         assertTrue(resultsQuery1.isEmpty());
 
         // use filter with non existent field as optional, we should have some results
         QueryBuilder filterWithOptionalNonExistentField = QueryBuilders.boolQuery()
-                .should(QueryBuilders.rangeQuery(NON_EXISTENT_INTEGER_FIELD_NAME).gte(1))
-                .must(QueryBuilders.rangeQuery(INTEGER_FIELD_NAME).gte(1));
+            .should(QueryBuilders.rangeQuery(NON_EXISTENT_INTEGER_FIELD_NAME).gte(1))
+            .must(QueryBuilders.rangeQuery(INTEGER_FIELD_NAME).gte(1));
         Response searchWithOptionalNonExistentFiledInFilterResponse = searchKNNIndex(
-                INDEX_NAME,
-                new KNNQueryBuilder(FIELD_NAME, searchVector, k, filterWithOptionalNonExistentField),
-                k
+            INDEX_NAME,
+            new KNNQueryBuilder(FIELD_NAME, searchVector, k, filterWithOptionalNonExistentField),
+            k
         );
         List<KNNResult> resultsQuery2 = parseSearchResponse(
-                EntityUtils.toString(searchWithOptionalNonExistentFiledInFilterResponse.getEntity()),
-                FIELD_NAME
+            EntityUtils.toString(searchWithOptionalNonExistentFiledInFilterResponse.getEntity()),
+            FIELD_NAME
         );
         assertEquals(1, resultsQuery2.size());
     }
@@ -349,7 +349,7 @@ public class JVectorEngineIT extends KNNRestTestCase {
 
     private List<float[]> queryResults(final float[] searchVector, final int k) throws Exception {
         final String responseBody = EntityUtils.toString(
-                searchKNNIndex(INDEX_NAME, new KNNQueryBuilder(FIELD_NAME, searchVector, k), k).getEntity()
+            searchKNNIndex(INDEX_NAME, new KNNQueryBuilder(FIELD_NAME, searchVector, k), k).getEntity()
         );
         final List<KNNResult> knnResults = parseSearchResponse(responseBody, FIELD_NAME);
         assertNotNull(knnResults);
@@ -357,43 +357,44 @@ public class JVectorEngineIT extends KNNRestTestCase {
     }
 
     private void validateQueryResultsWithFilters(
-            float[] searchVector,
-            int kGreaterThanFilterResult,
-            int kLimitsFilterResult,
-            List<String> expectedDocIdsKGreaterThanFilterResult,
-            List<String> expectedDocIdsKLimitsFilterResult
+        float[] searchVector,
+        int kGreaterThanFilterResult,
+        int kLimitsFilterResult,
+        List<String> expectedDocIdsKGreaterThanFilterResult,
+        List<String> expectedDocIdsKLimitsFilterResult
     ) throws IOException, ParseException {
         final Response response = searchKNNIndex(
-                INDEX_NAME,
-                new KNNQueryBuilder(FIELD_NAME, searchVector, kGreaterThanFilterResult, QueryBuilders.termQuery(COLOR_FIELD_NAME, "red")),
-                kGreaterThanFilterResult
+            INDEX_NAME,
+            new KNNQueryBuilder(FIELD_NAME, searchVector, kGreaterThanFilterResult, QueryBuilders.termQuery(COLOR_FIELD_NAME, "red")),
+            kGreaterThanFilterResult
         );
         final String responseBody = EntityUtils.toString(response.getEntity());
         final List<KNNResult> knnResults = parseSearchResponse(responseBody, FIELD_NAME);
 
         assertEquals(expectedDocIdsKGreaterThanFilterResult.size(), knnResults.size());
         assertTrue(
-                knnResults.stream().map(KNNResult::getDocId).collect(Collectors.toList()).containsAll(expectedDocIdsKGreaterThanFilterResult)
+            knnResults.stream().map(KNNResult::getDocId).collect(Collectors.toList()).containsAll(expectedDocIdsKGreaterThanFilterResult)
         );
 
         final Response responseKLimitsFilterResult = searchKNNIndex(
-                INDEX_NAME,
-                new KNNQueryBuilder(FIELD_NAME, searchVector, kLimitsFilterResult, QueryBuilders.termQuery(COLOR_FIELD_NAME, "red")),
-                kLimitsFilterResult
+            INDEX_NAME,
+            new KNNQueryBuilder(FIELD_NAME, searchVector, kLimitsFilterResult, QueryBuilders.termQuery(COLOR_FIELD_NAME, "red")),
+            kLimitsFilterResult
         );
         final String responseBodyKLimitsFilterResult = EntityUtils.toString(responseKLimitsFilterResult.getEntity());
         final List<KNNResult> knnResultsKLimitsFilterResult = parseSearchResponse(responseBodyKLimitsFilterResult, FIELD_NAME);
 
         assertEquals(expectedDocIdsKLimitsFilterResult.size(), knnResultsKLimitsFilterResult.size());
         assertTrue(
-                knnResultsKLimitsFilterResult.stream()
-                        .map(KNNResult::getDocId)
-                        .collect(Collectors.toList())
-                        .containsAll(expectedDocIdsKLimitsFilterResult)
+            knnResultsKLimitsFilterResult.stream()
+                .map(KNNResult::getDocId)
+                .collect(Collectors.toList())
+                .containsAll(expectedDocIdsKLimitsFilterResult)
         );
     }
 
-    private void createKnnIndexMappingWithJVectorEngine(int dimension, SpaceType spaceType, VectorDataType vectorDataType) throws Exception {
+    private void createKnnIndexMappingWithJVectorEngine(int dimension, SpaceType spaceType, VectorDataType vectorDataType)
+        throws Exception {
         XContentBuilder builder = XContentFactory.jsonBuilder()
             .startObject()
             .startObject(PROPERTIES_FIELD_NAME)
@@ -416,7 +417,7 @@ public class JVectorEngineIT extends KNNRestTestCase {
 
         String mapping = builder.toString();
         Settings indexSettings = getDefaultIndexSettings();
-        //indexSettings = Settings.builder().put(indexSettings).put(INDEX_USE_COMPOUND_FILE.getKey(), false).build();
+        // indexSettings = Settings.builder().put(indexSettings).put(INDEX_USE_COMPOUND_FILE.getKey(), false).build();
         createKnnIndex(INDEX_NAME, indexSettings, mapping);
     }
 

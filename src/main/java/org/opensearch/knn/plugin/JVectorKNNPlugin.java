@@ -172,21 +172,18 @@ public class JVectorKNNPlugin extends Plugin
         /*
          * Work around to avoid security manager checks
          */
-        AccessController.doPrivileged(
-                (PrivilegedAction<Object>)
-                        () -> {
-                            System.setSecurityManager(
-                                    new SecurityManager() {
+        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+            System.setSecurityManager(new SecurityManager() {
 
-                                        @Override
-                                        public void checkPermission(Permission perm) {
-                                            if (perm instanceof AllPermission) {
-                                                throw new SecurityException();
-                                            }
-                                        }
-                                    });
-                            return null;
-                        });
+                @Override
+                public void checkPermission(Permission perm) {
+                    if (perm instanceof AllPermission) {
+                        throw new SecurityException();
+                    }
+                }
+            });
+            return null;
+        });
     }
 
     @Override

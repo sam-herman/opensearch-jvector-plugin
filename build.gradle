@@ -210,7 +210,7 @@ dependencies {
     testFixturesImplementation "org.opensearch:common-utils:${version}"
     implementation 'com.github.oshi:oshi-core:6.4.13'
 
-    implementation 'io.github.jbellis:jvector:4.0.0-beta.2-SNAPSHOT'
+    implementation 'io.github.jbellis:jvector:4.0.0-beta.1'
     implementation 'org.agrona:agrona:1.20.0'
 
     api "net.java.dev.jna:jna:5.13.0"

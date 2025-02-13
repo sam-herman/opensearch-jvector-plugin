@@ -27,12 +27,18 @@ public class ForceMergesOnlyMergePolicy extends MergePolicy {
     }
 
     @Override
-    public MergeSpecification findMerges(MergeTrigger mergeTrigger, SegmentInfos segmentInfos, MergeContext mergeContext) throws IOException {
+    public MergeSpecification findMerges(MergeTrigger mergeTrigger, SegmentInfos segmentInfos, MergeContext mergeContext)
+        throws IOException {
         return null;
     }
 
     @Override
-    public MergeSpecification findForcedMerges(SegmentInfos segmentInfos, int maxSegmentCount, Map<SegmentCommitInfo, Boolean> segmentsToMerge, MergeContext mergeContext) throws IOException {
+    public MergeSpecification findForcedMerges(
+        SegmentInfos segmentInfos,
+        int maxSegmentCount,
+        Map<SegmentCommitInfo, Boolean> segmentsToMerge,
+        MergeContext mergeContext
+    ) throws IOException {
         // If the segments are already merged (e.g. there's only 1 segment), or
         // there are <maxNumSegments:.
         if (isMerged(segmentInfos, maxSegmentCount, segmentsToMerge, mergeContext)) {
@@ -64,11 +70,11 @@ public class ForceMergesOnlyMergePolicy extends MergePolicy {
      * specified {@code maxNumSegments}.
      */
     protected boolean isMerged(
-            SegmentInfos infos,
-            int maxNumSegments,
-            Map<SegmentCommitInfo, Boolean> segmentsToMerge,
-            MergeContext mergeContext)
-            throws IOException {
+        SegmentInfos infos,
+        int maxNumSegments,
+        Map<SegmentCommitInfo, Boolean> segmentsToMerge,
+        MergeContext mergeContext
+    ) throws IOException {
         final int numSegments = infos.size();
         int numToMerge = 0;
         SegmentCommitInfo mergeInfo = null;
@@ -83,7 +89,6 @@ public class ForceMergesOnlyMergePolicy extends MergePolicy {
             }
         }
 
-        return numToMerge <= maxNumSegments
-                && (numToMerge != 1 || !segmentIsOriginal || isMerged(infos, mergeInfo, mergeContext));
+        return numToMerge <= maxNumSegments && (numToMerge != 1 || !segmentIsOriginal || isMerged(infos, mergeInfo, mergeContext));
     }
 }

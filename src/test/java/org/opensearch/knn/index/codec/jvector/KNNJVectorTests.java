@@ -53,8 +53,7 @@ public class KNNJVectorTests extends LuceneTestCase {
         indexWriterConfig.setMergePolicy(new ForceMergesOnlyMergePolicy());
         final Path indexPath = createTempDir();
         log.info("Index path: {}", indexPath);
-        try (Directory dir = newFSDirectory(indexPath);
-             RandomIndexWriter w = new RandomIndexWriter(random(), dir, indexWriterConfig)) {
+        try (Directory dir = newFSDirectory(indexPath); RandomIndexWriter w = new RandomIndexWriter(random(), dir, indexWriterConfig)) {
             final float[] target = new float[] { 0.0f, 0.0f };
             for (int i = 1; i < totalNumberOfDocs + 1; i++) {
                 final float[] source = new float[] { 0.0f, 1.0f / i };
@@ -64,7 +63,6 @@ public class KNNJVectorTests extends LuceneTestCase {
             }
             log.info("Flushing docs to make them discoverable on the file system");
             w.commit();
-
 
             try (IndexReader reader = w.getReader()) {
                 log.info("We should now have a single segment with 10 documents");
@@ -77,11 +75,23 @@ public class KNNJVectorTests extends LuceneTestCase {
                 TopDocs topDocs = searcher.search(knnFloatVectorQuery, k);
                 assertEquals(k, topDocs.totalHits.value());
                 assertEquals(9, topDocs.scoreDocs[0].doc);
-                Assert.assertEquals(VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[]{0.0f, 1.0f / 10.0f}), topDocs.scoreDocs[0].score, 0.001f);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 1.0f / 10.0f }),
+                    topDocs.scoreDocs[0].score,
+                    0.001f
+                );
                 assertEquals(8, topDocs.scoreDocs[1].doc);
-                Assert.assertEquals(VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[]{0.0f, 1.0f / 9.0f}), topDocs.scoreDocs[1].score, 0.001f);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 1.0f / 9.0f }),
+                    topDocs.scoreDocs[1].score,
+                    0.001f
+                );
                 assertEquals(7, topDocs.scoreDocs[2].doc);
-                Assert.assertEquals(VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[]{0.0f, 1.0f / 8.0f}), topDocs.scoreDocs[2].score, 0.001f);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 1.0f / 8.0f }),
+                    topDocs.scoreDocs[2].score,
+                    0.001f
+                );
                 log.info("successfully completed search tests");
             }
         }
@@ -106,8 +116,10 @@ public class KNNJVectorTests extends LuceneTestCase {
         indexWriterConfig.setMergePolicy(new ForceMergesOnlyMergePolicy(false));
         final Path indexPath = createTempDir();
         log.info("Index path: {}", indexPath);
-        try (FSDirectory dir = new NIOFSDirectory(indexPath, FSLockFactory.getDefault());
-             IndexWriter w = new IndexWriter(dir, indexWriterConfig)) {
+        try (
+            FSDirectory dir = new NIOFSDirectory(indexPath, FSLockFactory.getDefault());
+            IndexWriter w = new IndexWriter(dir, indexWriterConfig)
+        ) {
             final float[] target = new float[] { 0.0f, 0.0f };
             for (int i = 1; i < totalNumberOfDocs + 1; i++) {
                 final float[] source = new float[] { 0.0f, 1.0f / i };
@@ -128,11 +140,23 @@ public class KNNJVectorTests extends LuceneTestCase {
                 TopDocs topDocs = searcher.search(knnFloatVectorQuery, k);
                 assertEquals(k, topDocs.totalHits.value());
                 assertEquals(9, topDocs.scoreDocs[0].doc);
-                Assert.assertEquals(VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[]{0.0f, 1.0f / 10.0f}), topDocs.scoreDocs[0].score, 0.001f);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 1.0f / 10.0f }),
+                    topDocs.scoreDocs[0].score,
+                    0.001f
+                );
                 assertEquals(8, topDocs.scoreDocs[1].doc);
-                Assert.assertEquals(VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[]{0.0f, 1.0f / 9.0f}), topDocs.scoreDocs[1].score, 0.001f);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 1.0f / 9.0f }),
+                    topDocs.scoreDocs[1].score,
+                    0.001f
+                );
                 assertEquals(7, topDocs.scoreDocs[2].doc);
-                Assert.assertEquals(VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[]{0.0f, 1.0f / 8.0f}), topDocs.scoreDocs[2].score, 0.001f);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 1.0f / 8.0f }),
+                    topDocs.scoreDocs[2].score,
+                    0.001f
+                );
                 log.info("successfully completed search tests");
             }
         }
@@ -158,11 +182,13 @@ public class KNNJVectorTests extends LuceneTestCase {
         indexWriterConfig.setMergeScheduler(new SerialMergeScheduler());
         final Path indexPath = createTempDir();
         log.info("Index path: {}", indexPath);
-        try (FSDirectory dir = new NIOFSDirectory(indexPath, FSLockFactory.getDefault());
-             IndexWriter w = new IndexWriter(dir, indexWriterConfig)) {
-            final float[] target = new float[]{0.0f, 0.0f};
+        try (
+            FSDirectory dir = new NIOFSDirectory(indexPath, FSLockFactory.getDefault());
+            IndexWriter w = new IndexWriter(dir, indexWriterConfig)
+        ) {
+            final float[] target = new float[] { 0.0f, 0.0f };
             for (int i = 1; i < totalNumberOfDocs + 1; i++) {
-                final float[] source = new float[]{0.0f, 1.0f / i};
+                final float[] source = new float[] { 0.0f, 1.0f / i };
                 final Document doc = new Document();
                 doc.add(new KnnFloatVectorField("test_field", source, VectorSimilarityFunction.EUCLIDEAN));
                 doc.add(new StringField("my_doc_id", Integer.toString(i, 10), Field.Store.YES));
@@ -184,13 +210,25 @@ public class KNNJVectorTests extends LuceneTestCase {
                 assertEquals(k, topDocs.totalHits.value());
                 Document doc = reader.storedFields().document(topDocs.scoreDocs[0].doc);
                 assertEquals("10", doc.get("my_doc_id"));
-                Assert.assertEquals(VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[]{0.0f, 1.0f / 10.0f}), topDocs.scoreDocs[0].score, 0.001f);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 1.0f / 10.0f }),
+                    topDocs.scoreDocs[0].score,
+                    0.001f
+                );
                 doc = reader.storedFields().document(topDocs.scoreDocs[1].doc);
                 assertEquals("9", doc.get("my_doc_id"));
-                Assert.assertEquals(VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[]{0.0f, 1.0f / 9.0f}), topDocs.scoreDocs[1].score, 0.001f);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 1.0f / 9.0f }),
+                    topDocs.scoreDocs[1].score,
+                    0.001f
+                );
                 doc = reader.storedFields().document(topDocs.scoreDocs[2].doc);
                 assertEquals("8", doc.get("my_doc_id"));
-                Assert.assertEquals(VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[]{0.0f, 1.0f / 8.0f}), topDocs.scoreDocs[2].score, 0.001f);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 1.0f / 8.0f }),
+                    topDocs.scoreDocs[2].score,
+                    0.001f
+                );
                 log.info("successfully completed search tests");
             }
         }
@@ -216,11 +254,13 @@ public class KNNJVectorTests extends LuceneTestCase {
         indexWriterConfig.setMergeScheduler(new SerialMergeScheduler());
         final Path indexPath = createTempDir();
         log.info("Index path: {}", indexPath);
-        try (FSDirectory dir = new NIOFSDirectory(indexPath, FSLockFactory.getDefault());
-             IndexWriter w = new IndexWriter(dir, indexWriterConfig)) {
-            final float[] target = new float[]{0.0f, 0.0f};
+        try (
+            FSDirectory dir = new NIOFSDirectory(indexPath, FSLockFactory.getDefault());
+            IndexWriter w = new IndexWriter(dir, indexWriterConfig)
+        ) {
+            final float[] target = new float[] { 0.0f, 0.0f };
             for (int i = 1; i < totalNumberOfDocs + 1; i++) {
-                final float[] source = new float[]{0.0f, 1.0f / i};
+                final float[] source = new float[] { 0.0f, 1.0f / i };
                 final Document doc = new Document();
                 doc.add(new KnnFloatVectorField("test_field", source, VectorSimilarityFunction.EUCLIDEAN));
                 doc.add(new StringField("my_doc_id", Integer.toString(i, 10), Field.Store.YES));
@@ -243,13 +283,25 @@ public class KNNJVectorTests extends LuceneTestCase {
                 assertEquals(k, topDocs.totalHits.value());
                 Document doc = reader.storedFields().document(topDocs.scoreDocs[0].doc);
                 assertEquals("10", doc.get("my_doc_id"));
-                Assert.assertEquals(VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[]{0.0f, 1.0f / 10.0f}), topDocs.scoreDocs[0].score, 0.001f);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 1.0f / 10.0f }),
+                    topDocs.scoreDocs[0].score,
+                    0.001f
+                );
                 doc = reader.storedFields().document(topDocs.scoreDocs[1].doc);
                 assertEquals("9", doc.get("my_doc_id"));
-                Assert.assertEquals(VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[]{0.0f, 1.0f / 9.0f}), topDocs.scoreDocs[1].score, 0.001f);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 1.0f / 9.0f }),
+                    topDocs.scoreDocs[1].score,
+                    0.001f
+                );
                 doc = reader.storedFields().document(topDocs.scoreDocs[2].doc);
                 assertEquals("8", doc.get("my_doc_id"));
-                Assert.assertEquals(VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[]{0.0f, 1.0f / 8.0f}), topDocs.scoreDocs[2].score, 0.001f);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 1.0f / 8.0f }),
+                    topDocs.scoreDocs[2].score,
+                    0.001f
+                );
                 log.info("successfully completed search tests");
             }
         }
@@ -277,11 +329,13 @@ public class KNNJVectorTests extends LuceneTestCase {
         indexWriterConfig.setMergeScheduler(new SerialMergeScheduler());
         final Path indexPath = createTempDir();
         log.info("Index path: {}", indexPath);
-        try (FSDirectory dir = new NIOFSDirectory(indexPath, FSLockFactory.getDefault());
-             IndexWriter w = new IndexWriter(dir, indexWriterConfig)) {
-            final float[] target = new float[]{0.0f, 0.0f};
+        try (
+            FSDirectory dir = new NIOFSDirectory(indexPath, FSLockFactory.getDefault());
+            IndexWriter w = new IndexWriter(dir, indexWriterConfig)
+        ) {
+            final float[] target = new float[] { 0.0f, 0.0f };
             for (int i = 1; i < totalNumberOfDocs + 1; i++) {
-                final float[] source = new float[]{0.0f, 1.0f / i};
+                final float[] source = new float[] { 0.0f, 1.0f / i };
                 final Document doc = new Document();
                 doc.add(new KnnFloatVectorField("test_field", source, VectorSimilarityFunction.EUCLIDEAN));
                 w.addDocument(doc);
@@ -301,11 +355,23 @@ public class KNNJVectorTests extends LuceneTestCase {
                 TopDocs topDocs = searcher.search(knnFloatVectorQuery, k);
                 assertEquals(k, topDocs.totalHits.value());
                 assertEquals(9, topDocs.scoreDocs[0].doc);
-                Assert.assertEquals(VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[]{0.0f, 1.0f / 10.0f}), topDocs.scoreDocs[0].score, 0.01f);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 1.0f / 10.0f }),
+                    topDocs.scoreDocs[0].score,
+                    0.01f
+                );
                 assertEquals(8, topDocs.scoreDocs[1].doc);
-                Assert.assertEquals(VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[]{0.0f, 1.0f / 9.0f}), topDocs.scoreDocs[1].score, 0.01f);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 1.0f / 9.0f }),
+                    topDocs.scoreDocs[1].score,
+                    0.01f
+                );
                 assertEquals(7, topDocs.scoreDocs[2].doc);
-                Assert.assertEquals(VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[]{0.0f, 1.0f / 8.0f}), topDocs.scoreDocs[2].score, 0.01f);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 1.0f / 8.0f }),
+                    topDocs.scoreDocs[2].score,
+                    0.01f
+                );
                 log.info("successfully completed search tests");
             }
         }
@@ -334,11 +400,13 @@ public class KNNJVectorTests extends LuceneTestCase {
         indexWriterConfig.setMergeScheduler(new SerialMergeScheduler());
         final Path indexPath = createTempDir();
         log.info("Index path: {}", indexPath);
-        try (FSDirectory dir = new NIOFSDirectory(indexPath, FSLockFactory.getDefault());
-             IndexWriter w = new IndexWriter(dir, indexWriterConfig)) {
-            final float[] target = new float[]{1.0f, 1.0f};
+        try (
+            FSDirectory dir = new NIOFSDirectory(indexPath, FSLockFactory.getDefault());
+            IndexWriter w = new IndexWriter(dir, indexWriterConfig)
+        ) {
+            final float[] target = new float[] { 1.0f, 1.0f };
             for (int i = 1; i < totalNumberOfDocs + 1; i++) {
-                final float[] source = new float[]{1.0f  + i, 2.0f  * i};
+                final float[] source = new float[] { 1.0f + i, 2.0f * i };
                 final Document doc = new Document();
                 doc.add(new KnnFloatVectorField("test_field", source, VectorSimilarityFunction.COSINE));
                 w.addDocument(doc);
@@ -358,11 +426,23 @@ public class KNNJVectorTests extends LuceneTestCase {
                 TopDocs topDocs = searcher.search(knnFloatVectorQuery, k);
                 assertEquals(k, topDocs.totalHits.value());
                 assertEquals(0, topDocs.scoreDocs[0].doc);
-                Assert.assertEquals(VectorSimilarityFunction.COSINE.compare(target, new float[]{2.0f, 2.0f}), topDocs.scoreDocs[0].score, 0.001f);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.COSINE.compare(target, new float[] { 2.0f, 2.0f }),
+                    topDocs.scoreDocs[0].score,
+                    0.001f
+                );
                 assertEquals(1, topDocs.scoreDocs[1].doc);
-                Assert.assertEquals(VectorSimilarityFunction.COSINE.compare(target, new float[]{3.0f, 4.0f}), topDocs.scoreDocs[1].score, 0.001f);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.COSINE.compare(target, new float[] { 3.0f, 4.0f }),
+                    topDocs.scoreDocs[1].score,
+                    0.001f
+                );
                 assertEquals(2, topDocs.scoreDocs[2].doc);
-                Assert.assertEquals(VectorSimilarityFunction.COSINE.compare(target, new float[]{4.0f, 6.0f}), topDocs.scoreDocs[2].score, 0.001f);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.COSINE.compare(target, new float[] { 4.0f, 6.0f }),
+                    topDocs.scoreDocs[2].score,
+                    0.001f
+                );
                 log.info("successfully completed search tests");
             }
         }
@@ -383,9 +463,8 @@ public class KNNJVectorTests extends LuceneTestCase {
         indexWriterConfig.setMergePolicy(new ForceMergesOnlyMergePolicy());
         final Path indexPath = createTempDir();
         log.info("Index path: {}", indexPath);
-        try (Directory dir = newFSDirectory(indexPath);
-            RandomIndexWriter w = new RandomIndexWriter(random(), dir, indexWriterConfig)) {
-            final byte[] source = new byte[] { (byte) 0, (byte)0 };
+        try (Directory dir = newFSDirectory(indexPath); RandomIndexWriter w = new RandomIndexWriter(random(), dir, indexWriterConfig)) {
+            final byte[] source = new byte[] { (byte) 0, (byte) 0 };
             final Document doc = new Document();
             doc.add(new KnnByteVectorField("test_field", source, VectorSimilarityFunction.EUCLIDEAN));
             Assert.assertThrows(UnsupportedOperationException.class, () -> w.addDocument(doc));
