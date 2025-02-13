@@ -69,7 +69,7 @@ apply plugin: 'opensearch.pluginzip'
 apply plugin: 'opensearch.repositories'
 
 allprojects {
-    group = 'org.opensearch.knn.jvector'
+    group = 'org.opensearch.knn'
     version = opensearch_version.tokenize('-')[0] + '.0'
     if (version_qualifier) {
         version += "-${version_qualifier}"
@@ -168,7 +168,7 @@ opensearchplugin {
     name 'opensearch-jvector'
     // zip file name and plugin name in ${opensearch.plugin.name} read by OpenSearch when plugin loading
     description 'OpenSearch jVector plugin'
-    classname 'org.opensearch.knn.jvector.plugin.JVectorPlugin'
+    classname 'org.opensearch.knn.plugin.JVectorKNNPlugin'
     extendedPlugins = ['lang-painless']
     licenseFile = rootProject.file('LICENSE.txt')
     noticeFile = rootProject.file('NOTICE.txt')
@@ -227,7 +227,11 @@ test {
     systemProperty 'opensearch.set.netty.runtime.available.processors', 'false'
     include '**/*Tests.class'
     testLogging.showStandardStreams = true
-    systemProperty 'log4j2.configurationFile', "${projectDir}/src/test/resources/log4j2-test.xml"
+    systemProperty 'log4j.configurationFile', "$rootDir/src/test/resources/log4j2.properties"
+
+    // Add this to ensure test classpath includes the main classes
+    classpath += files(sourceSets.main.output.classesDirs)
+    classpath += files(sourceSets.main.output.resourcesDir)
 }
 
 task integTestRemote(type: RestIntegTestTask) {
@@ -238,7 +242,7 @@ task integTestRemote(type: RestIntegTestTask) {
 tasks.named("check").configure { dependsOn(integTest) }
 
 integTest {
-    systemProperty "java.security.policy", "file://${projectDir}/src/main/resources/plugin-security.policy"
+    systemProperty "java.security.policy", "file://${projectDir}/src/main/resources/plugin-metadata/plugin-security.policy"
     testLogging.showStandardStreams = true
 
     include '**/*IT.class'
@@ -251,7 +255,7 @@ integTest {
 
 testClusters.integTest {
     testDistribution = "ARCHIVE"
-    systemProperty "java.security.policy", "file://${projectDir}/src/main/resources/plugin-security.policy"
+    systemProperty "java.security.policy", "file://${projectDir}/src/main/resources/plugin-metadata/plugin-security.policy"
 
     // This installs our plugin into the testClusters
     plugin(project.tasks.bundlePlugin.archiveFile)
