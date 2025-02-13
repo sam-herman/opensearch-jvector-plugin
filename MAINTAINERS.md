@@ -4,10 +4,11 @@ This document contains a list of maintainers in this repo. See [opensearch-proje
 
 ## Current Maintainers
 
-| Maintainer              | GitHub ID                                   | Affiliation |
-|-------------------------|---------------------------------------------|-------------|
-| Samuel Herman           | [sam-herman](https://github.com/sam-herman) | DataStax    |
-| Jake Luciani            | [...](https://github.com/...)               | DataStax      |
-| Jim Dickinson           | [...](https://github.com/...)               | DataStax      |
+| Maintainer    | GitHub ID                             | Affiliation |
+|---------------|---------------------------------------|-------------|
+| Samuel Herman | [sam-herman](https://github.com/sam-herman) | DataStax    |
+| Jake Luciani  | [tjake](https://github.com/tjake)          | DataStax      |
+| Jim Dickinson | [jimdickinson](https://github.com/jimdickinson)            | DataStax      |
+| Chris Mills   | [sandoichi](https://github.com/sandoichi)            | DataStax      |
 
 
