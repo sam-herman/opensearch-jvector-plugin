@@ -242,7 +242,7 @@ task integTestRemote(type: RestIntegTestTask) {
 tasks.named("check").configure { dependsOn(integTest) }
 
 integTest {
-    systemProperty "java.security.policy", "file://${projectDir}/src/main/resources/plugin-metadata/plugin-security.policy"
+    systemProperty "java.security.policy", "file://${projectDir}/src/main/plugin-metadata/plugin-security.policy"
     testLogging.showStandardStreams = true
 
     include '**/*IT.class'
@@ -255,7 +255,7 @@ integTest {
 
 testClusters.integTest {
     testDistribution = "ARCHIVE"
-    systemProperty "java.security.policy", "file://${projectDir}/src/main/resources/plugin-metadata/plugin-security.policy"
+    systemProperty "java.security.policy", "file://${projectDir}/src/main/plugin-metadata/plugin-security.policy"
 
     // This installs our plugin into the testClusters
     plugin(project.tasks.bundlePlugin.archiveFile)
