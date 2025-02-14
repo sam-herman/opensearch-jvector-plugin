@@ -6,7 +6,6 @@
 package org.opensearch.knn.index.engine.qframe;
 
 import org.apache.lucene.analysis.util.CSVUtil;
-import org.opensearch.knn.index.engine.faiss.QFrameBitEncoder;
 import org.opensearch.knn.quantization.enums.ScalarQuantizationType;
 
 import java.util.Locale;
@@ -18,8 +17,8 @@ public class QuantizationConfigParser {
 
     public static final String SEPARATOR = "=";
     public static final String TYPE_NAME = "type";
-    public static final String BINARY_TYPE = QFrameBitEncoder.NAME;
-    public static final String BIT_COUNT_NAME = QFrameBitEncoder.BITCOUNT_PARAM;
+    public static final String BINARY_TYPE = "PLACEHOLDER"; // QFrameBitEncoder.NAME;
+    public static final String BIT_COUNT_NAME = "PLACEHOLDER"; // QFrameBitEncoder.BITCOUNT_PARAM;
 
     /**
      * Parse quantization config to csv format

@@ -8,13 +8,10 @@ package org.opensearch.knn.index.codec;
 import lombok.AllArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.lucene.codecs.KnnVectorsFormat;
-import org.apache.lucene.codecs.hnsw.FlatVectorScorerUtil;
-import org.apache.lucene.codecs.lucene99.Lucene99FlatVectorsFormat;
 import org.apache.lucene.codecs.perfield.PerFieldKnnVectorsFormat;
 import org.opensearch.index.IndexSettings;
 import org.opensearch.index.mapper.MapperService;
 import org.opensearch.knn.index.KNNSettings;
-import org.opensearch.knn.index.codec.KNN990Codec.NativeEngines990KnnVectorsFormat;
 import org.opensearch.knn.index.codec.params.KNNScalarQuantizedVectorsFormatParams;
 import org.opensearch.knn.index.codec.params.KNNVectorsFormatParams;
 import org.opensearch.knn.index.engine.KNNEngine;
@@ -83,7 +80,7 @@ public abstract class BasePerFieldKnnVectorsFormat extends PerFieldKnnVectorsFor
 
         final KNNMappingConfig knnMappingConfig = mappedFieldType.getKnnMappingConfig();
         if (knnMappingConfig.getModelId().isPresent()) {
-            return nativeEngineVectorsFormat();
+            throw new UnsupportedOperationException("Unsupported operation");
         }
 
         final KNNMethodContext knnMethodContext = knnMappingConfig.getKnnMethodContext()
@@ -133,19 +130,8 @@ public abstract class BasePerFieldKnnVectorsFormat extends PerFieldKnnVectorsFor
                 );
                 return vectorsFormatSupplier.apply(engine, knnVectorsFormatParams);
             default:
-                // All native engines to use NativeEngines990KnnVectorsFormat
-                return nativeEngineVectorsFormat();
+                throw new UnsupportedOperationException("Unsupported engine");
         }
-    }
-
-    private NativeEngines990KnnVectorsFormat nativeEngineVectorsFormat() {
-        // mapperService is already checked for null or valid instance type at caller, hence we don't need
-        // addition isPresent check here.
-        int approximateThreshold = getApproximateThresholdValue();
-        return new NativeEngines990KnnVectorsFormat(
-            new Lucene99FlatVectorsFormat(FlatVectorScorerUtil.getLucene99FlatVectorsScorer()),
-            approximateThreshold
-        );
     }
 
     private int getApproximateThresholdValue() {

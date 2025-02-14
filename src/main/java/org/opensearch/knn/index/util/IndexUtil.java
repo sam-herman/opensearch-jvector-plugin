@@ -14,7 +14,6 @@ import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.common.ValidationException;
 import org.opensearch.knn.common.KNNConstants;
 import org.opensearch.knn.index.engine.KNNMethodContext;
-import org.opensearch.knn.index.KNNSettings;
 import org.opensearch.knn.index.engine.MethodComponentContext;
 import org.opensearch.knn.index.SpaceType;
 import org.opensearch.knn.index.VectorDataType;
@@ -24,7 +23,6 @@ import org.opensearch.knn.index.engine.KNNEngine;
 import org.opensearch.knn.indices.ModelDao;
 import org.opensearch.knn.indices.ModelMetadata;
 import org.opensearch.knn.indices.ModelUtil;
-import org.opensearch.knn.jni.JNIService;
 
 import java.io.File;
 import java.util.Collections;
@@ -36,7 +34,6 @@ import java.util.Set;
 import static org.opensearch.knn.common.KNNConstants.BYTES_PER_KILOBYTES;
 import static org.opensearch.knn.common.KNNConstants.ENCODER_FLAT;
 import static org.opensearch.knn.common.KNNConstants.EXPAND_NESTED;
-import static org.opensearch.knn.common.KNNConstants.HNSW_ALGO_EF_SEARCH;
 import static org.opensearch.knn.common.KNNConstants.SPACE_TYPE;
 import static org.opensearch.knn.common.KNNConstants.VECTOR_DATA_TYPE_FIELD;
 import static org.opensearch.knn.index.query.parser.RescoreParser.RESCORE_PARAMETER;
@@ -269,11 +266,6 @@ public class IndexUtil {
     ) {
         Map<String, Object> loadParameters = Maps.newHashMap(ImmutableMap.of(SPACE_TYPE, spaceType.getValue()));
 
-        // For nmslib, we need to add the dynamic ef_search parameter that needs to be passed in when the
-        // hnsw graphs are loaded into memory
-        if (KNNEngine.NMSLIB.equals(knnEngine)) {
-            loadParameters.put(HNSW_ALGO_EF_SEARCH, KNNSettings.getEfSearchParam(indexName));
-        }
         loadParameters.put(VECTOR_DATA_TYPE_FIELD, vectorDataType.getValue());
 
         return Collections.unmodifiableMap(loadParameters);
@@ -296,21 +288,6 @@ public class IndexUtil {
     }
 
     /**
-     * Checks if index requires shared state
-     *
-     * @param knnEngine The knnEngine associated with the index
-     * @param modelId The modelId associated with the index
-     * @param indexAddr Address to check if loaded index requires shared state
-     * @return true if state can be shared; false otherwise
-     */
-    public static boolean isSharedIndexStateRequired(KNNEngine knnEngine, String modelId, long indexAddr) {
-        if (StringUtils.isEmpty(modelId)) {
-            return false;
-        }
-        return JNIService.isSharedIndexStateRequired(indexAddr, knnEngine);
-    }
-
-    /**
      * Tell if it is binary index or not
      *
      * @param knnEngine knn engine associated with an index
@@ -318,8 +295,7 @@ public class IndexUtil {
      * @return true if it is binary index
      */
     public static boolean isBinaryIndex(KNNEngine knnEngine, Map<String, Object> parameters) {
-        return KNNEngine.FAISS == knnEngine
-            && parameters.get(VECTOR_DATA_TYPE_FIELD) != null
+        return parameters.get(VECTOR_DATA_TYPE_FIELD) != null
             && parameters.get(VECTOR_DATA_TYPE_FIELD).toString().equals(VectorDataType.BINARY.getValue());
     }
 

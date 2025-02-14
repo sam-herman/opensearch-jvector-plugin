@@ -12,8 +12,6 @@ import org.opensearch.core.action.ActionResponse;
 import org.opensearch.index.codec.CodecServiceFactory;
 import org.opensearch.index.engine.EngineFactory;
 import org.opensearch.indices.SystemIndexDescriptor;
-import org.opensearch.knn.index.KNNCircuitBreaker;
-import org.opensearch.knn.index.memory.NativeMemoryCacheManager;
 import org.opensearch.knn.plugin.search.KNNConcurrentSearchRequestDecider;
 import org.opensearch.knn.index.util.KNNClusterUtil;
 import org.opensearch.knn.index.query.KNNQueryBuilder;
@@ -21,19 +19,15 @@ import org.opensearch.knn.index.KNNSettings;
 import org.opensearch.knn.index.mapper.KNNVectorFieldMapper;
 
 import org.opensearch.knn.index.query.parser.KNNQueryBuilderParser;
-import org.opensearch.knn.index.query.KNNWeight;
 import org.opensearch.knn.index.codec.KNNCodecService;
-import org.opensearch.knn.index.memory.NativeMemoryLoadStrategy;
 import org.opensearch.knn.indices.ModelGraveyard;
 import org.opensearch.knn.indices.ModelCache;
 import org.opensearch.knn.indices.ModelDao;
 import org.opensearch.knn.plugin.rest.RestDeleteModelHandler;
 import org.opensearch.knn.plugin.rest.RestGetModelHandler;
 import org.opensearch.knn.plugin.rest.RestKNNStatsHandler;
-import org.opensearch.knn.plugin.rest.RestKNNWarmupHandler;
 import org.opensearch.knn.plugin.rest.RestSearchModelHandler;
 import org.opensearch.knn.plugin.rest.RestTrainModelHandler;
-import org.opensearch.knn.plugin.rest.RestClearCacheHandler;
 import org.opensearch.knn.plugin.script.KNNScoringScriptEngine;
 import org.opensearch.knn.plugin.stats.KNNStats;
 import org.opensearch.knn.plugin.transport.DeleteModelAction;
@@ -42,10 +36,6 @@ import org.opensearch.knn.plugin.transport.GetModelAction;
 import org.opensearch.knn.plugin.transport.GetModelTransportAction;
 import org.opensearch.knn.plugin.transport.KNNStatsAction;
 import org.opensearch.knn.plugin.transport.KNNStatsTransportAction;
-import org.opensearch.knn.plugin.transport.KNNWarmupAction;
-import org.opensearch.knn.plugin.transport.KNNWarmupTransportAction;
-import org.opensearch.knn.plugin.transport.ClearCacheAction;
-import org.opensearch.knn.plugin.transport.ClearCacheTransportAction;
 import com.google.common.collect.ImmutableList;
 
 import org.opensearch.action.ActionRequest;
@@ -74,7 +64,6 @@ import org.opensearch.knn.plugin.transport.TrainingJobRouteDecisionInfoTransport
 import org.opensearch.knn.plugin.transport.TrainingJobRouterAction;
 import org.opensearch.knn.plugin.transport.TrainingJobRouterTransportAction;
 import org.opensearch.knn.plugin.transport.TrainingModelAction;
-import org.opensearch.knn.plugin.transport.TrainingModelRequest;
 import org.opensearch.knn.plugin.transport.TrainingModelTransportAction;
 import org.opensearch.knn.plugin.transport.UpdateModelMetadataAction;
 import org.opensearch.knn.plugin.transport.UpdateModelMetadataTransportAction;
@@ -217,7 +206,6 @@ public class JVectorKNNPlugin extends Plugin
 
         // Initialize Native Memory loading strategies
         VectorReader vectorReader = new VectorReader(client);
-        NativeMemoryLoadStrategy.TrainingLoadStrategy.initialize(vectorReader);
 
         KNNSettings.state().initialize(client, clusterService);
         KNNClusterUtil.instance().initialize(clusterService);
@@ -226,11 +214,7 @@ public class JVectorKNNPlugin extends Plugin
         TrainingJobRunner.initialize(threadPool, ModelDao.OpenSearchKNNModelDao.getInstance());
         TrainingJobClusterStateListener.initialize(threadPool, ModelDao.OpenSearchKNNModelDao.getInstance(), clusterService);
         QuantizationStateCache.setThreadPool(threadPool);
-        NativeMemoryCacheManager.setThreadPool(threadPool);
-        KNNCircuitBreaker.getInstance().initialize(threadPool, clusterService, client);
         KNNQueryBuilder.initialize(ModelDao.OpenSearchKNNModelDao.getInstance());
-        KNNWeight.initialize(ModelDao.OpenSearchKNNModelDao.getInstance());
-        TrainingModelRequest.initialize(ModelDao.OpenSearchKNNModelDao.getInstance(), clusterService);
 
         clusterService.addListener(TrainingJobClusterStateListener.getInstance());
 
@@ -253,26 +237,17 @@ public class JVectorKNNPlugin extends Plugin
     ) {
 
         RestKNNStatsHandler restKNNStatsHandler = new RestKNNStatsHandler();
-        RestKNNWarmupHandler restKNNWarmupHandler = new RestKNNWarmupHandler(
-            settings,
-            restController,
-            clusterService,
-            indexNameExpressionResolver
-        );
         RestGetModelHandler restGetModelHandler = new RestGetModelHandler();
         RestDeleteModelHandler restDeleteModelHandler = new RestDeleteModelHandler();
         RestTrainModelHandler restTrainModelHandler = new RestTrainModelHandler();
         RestSearchModelHandler restSearchModelHandler = new RestSearchModelHandler();
-        RestClearCacheHandler restClearCacheHandler = new RestClearCacheHandler(clusterService, indexNameExpressionResolver);
 
         return ImmutableList.of(
             restKNNStatsHandler,
-            restKNNWarmupHandler,
             restGetModelHandler,
             restDeleteModelHandler,
             restTrainModelHandler,
-            restSearchModelHandler,
-            restClearCacheHandler
+            restSearchModelHandler
         );
     }
 
@@ -283,7 +258,6 @@ public class JVectorKNNPlugin extends Plugin
     public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
         return Arrays.asList(
             new ActionHandler<>(KNNStatsAction.INSTANCE, KNNStatsTransportAction.class),
-            new ActionHandler<>(KNNWarmupAction.INSTANCE, KNNWarmupTransportAction.class),
             new ActionHandler<>(UpdateModelMetadataAction.INSTANCE, UpdateModelMetadataTransportAction.class),
             new ActionHandler<>(TrainingJobRouteDecisionInfoAction.INSTANCE, TrainingJobRouteDecisionInfoTransportAction.class),
             new ActionHandler<>(GetModelAction.INSTANCE, GetModelTransportAction.class),
@@ -292,8 +266,7 @@ public class JVectorKNNPlugin extends Plugin
             new ActionHandler<>(TrainingModelAction.INSTANCE, TrainingModelTransportAction.class),
             new ActionHandler<>(RemoveModelFromCacheAction.INSTANCE, RemoveModelFromCacheTransportAction.class),
             new ActionHandler<>(SearchModelAction.INSTANCE, SearchModelTransportAction.class),
-            new ActionHandler<>(UpdateModelGraveyardAction.INSTANCE, UpdateModelGraveyardTransportAction.class),
-            new ActionHandler<>(ClearCacheAction.INSTANCE, ClearCacheTransportAction.class)
+            new ActionHandler<>(UpdateModelGraveyardAction.INSTANCE, UpdateModelGraveyardTransportAction.class)
         );
     }
 

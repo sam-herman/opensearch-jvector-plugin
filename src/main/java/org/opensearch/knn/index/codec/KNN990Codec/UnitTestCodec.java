@@ -32,7 +32,7 @@ public class UnitTestCodec extends FilterCodec {
         return new PerFieldKnnVectorsFormat() {
             @Override
             public KnnVectorsFormat getKnnVectorsFormatForField(String field) {
-                return new NativeEngines990KnnVectorsFormat(BUILD_GRAPH_ALWAYS);
+                throw new UnsupportedOperationException("Unsupported operation");
             }
         };
     }

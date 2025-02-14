@@ -37,7 +37,7 @@ public final class EngineResolver {
 
         // Faiss is the only engine that supports training, so we default to faiss here for now
         if (requiresTraining) {
-            return KNNEngine.FAISS;
+            return KNNEngine.JVECTOR;
         }
 
         Mode mode = knnMethodConfigContext.getMode();
@@ -49,7 +49,7 @@ public final class EngineResolver {
 
         // For 1x, we need to default to faiss if mode is provided and use nmslib otherwise
         if (CompressionLevel.isConfigured(compressionLevel) == false || compressionLevel == CompressionLevel.x1) {
-            return mode == Mode.ON_DISK ? KNNEngine.FAISS : KNNEngine.NMSLIB;
+            return mode == Mode.ON_DISK ? KNNEngine.JVECTOR : KNNEngine.LUCENE;
         }
 
         // Lucene is only engine that supports 4x - so we have to default to it here.
@@ -57,6 +57,6 @@ public final class EngineResolver {
             return KNNEngine.LUCENE;
         }
 
-        return KNNEngine.FAISS;
+        return KNNEngine.JVECTOR;
     }
 }

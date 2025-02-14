@@ -12,8 +12,6 @@
 package org.opensearch.knn.training;
 
 import org.opensearch.action.search.SearchResponse;
-import org.opensearch.knn.index.memory.NativeMemoryAllocation;
-import org.opensearch.knn.jni.JNICommons;
 import org.opensearch.search.SearchHit;
 
 import java.util.ArrayList;
@@ -27,18 +25,13 @@ public class ByteTrainingDataConsumer extends TrainingDataConsumer {
     /**
      * Constructor
      *
-     * @param trainingDataAllocation NativeMemoryAllocation that contains information about native memory allocation.
      */
-    public ByteTrainingDataConsumer(NativeMemoryAllocation.TrainingDataAllocation trainingDataAllocation) {
-        super(trainingDataAllocation);
+    public ByteTrainingDataConsumer() {
+        super();
     }
 
     @Override
-    public void accept(List<?> byteVectors) {
-        long memoryAddress = trainingDataAllocation.getMemoryAddress();
-        memoryAddress = JNICommons.storeByteVectorData(memoryAddress, byteVectors.toArray(new byte[0][0]), byteVectors.size());
-        trainingDataAllocation.setMemoryAddress(memoryAddress);
-    }
+    public void accept(List<?> byteVectors) {}
 
     @Override
     public void processTrainingVectors(SearchResponse searchResponse, int vectorsToAdd, String fieldName) {

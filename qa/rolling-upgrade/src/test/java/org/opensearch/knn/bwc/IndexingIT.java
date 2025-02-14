@@ -15,7 +15,6 @@ public class IndexingIT extends AbstractRollingUpgradeTestCase {
 
     private static final String ALGO = "hnsw";
 
-    private static final String FAISS_NAME = "faiss";
     private static final String LUCENE_NAME = "lucene";
 
     public void testKNNDefaultIndexSettings() throws Exception {
@@ -92,7 +91,7 @@ public class IndexingIT extends AbstractRollingUpgradeTestCase {
         final String upgradedIndex = testIndex + "upgraded";
         switch (getClusterType()) {
             case OLD:
-                createKnnIndex(testIndex, getKNNDefaultIndexSettings(), createKnnIndexMapping(TEST_FIELD, DIMENSIONS, ALGO, FAISS_NAME));
+                createKnnIndex(testIndex, getKNNDefaultIndexSettings(), createKnnIndexMapping(TEST_FIELD, DIMENSIONS, ALGO, LUCENE_NAME));
                 int docIdOld = 0;
                 addKNNDocs(testIndex, TEST_FIELD, DIMENSIONS, docIdOld, NUM_DOCS);
                 break;
@@ -102,7 +101,7 @@ public class IndexingIT extends AbstractRollingUpgradeTestCase {
                     createKnnIndex(
                         firstMixRoundIndex,
                         getKNNDefaultIndexSettings(),
-                        createKnnIndexMapping(TEST_FIELD, DIMENSIONS, ALGO, FAISS_NAME)
+                        createKnnIndexMapping(TEST_FIELD, DIMENSIONS, ALGO, LUCENE_NAME)
                     );
                     addKNNDocs(firstMixRoundIndex, TEST_FIELD, DIMENSIONS, docIdOld, NUM_DOCS);
                 } else {
@@ -110,7 +109,7 @@ public class IndexingIT extends AbstractRollingUpgradeTestCase {
                     createKnnIndex(
                         otherMixRoundIndex,
                         getKNNDefaultIndexSettings(),
-                        createKnnIndexMapping(TEST_FIELD, DIMENSIONS, ALGO, FAISS_NAME)
+                        createKnnIndexMapping(TEST_FIELD, DIMENSIONS, ALGO, LUCENE_NAME)
                     );
                     addKNNDocs(otherMixRoundIndex, TEST_FIELD, DIMENSIONS, docIdOld, NUM_DOCS);
                 }
@@ -120,7 +119,7 @@ public class IndexingIT extends AbstractRollingUpgradeTestCase {
                 createKnnIndex(
                     upgradedIndex,
                     getKNNDefaultIndexSettings(),
-                    createKnnIndexMapping(TEST_FIELD, DIMENSIONS, ALGO, FAISS_NAME)
+                    createKnnIndexMapping(TEST_FIELD, DIMENSIONS, ALGO, LUCENE_NAME)
                 );
                 addKNNDocs(upgradedIndex, TEST_FIELD, DIMENSIONS, docIdOld, NUM_DOCS);
 

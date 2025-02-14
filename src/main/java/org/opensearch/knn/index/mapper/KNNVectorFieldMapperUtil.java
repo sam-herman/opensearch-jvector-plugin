@@ -21,7 +21,6 @@ import org.apache.lucene.util.BytesRef;
 import org.opensearch.Version;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.knn.index.KNNSettings;
-import org.opensearch.knn.index.KnnCircuitBreakerException;
 import org.opensearch.knn.index.SpaceType;
 import org.opensearch.knn.index.VectorDataType;
 import org.opensearch.knn.index.codec.util.KNNVectorSerializerFactory;
@@ -108,17 +107,6 @@ public class KNNVectorFieldMapperUtil {
     public static int getExpectedVectorLength(final KNNVectorFieldType knnVectorFieldType) {
         int expectedDimensions = knnVectorFieldType.getKnnMappingConfig().getDimension();
         return VectorDataType.BINARY == knnVectorFieldType.getVectorDataType() ? expectedDimensions / 8 : expectedDimensions;
-    }
-
-    /**
-     * Validate if the circuit breaker is triggered
-     */
-    static void validateIfCircuitBreakerIsNotTriggered() {
-        if (KNNSettings.isCircuitBreakerTriggered()) {
-            throw new KnnCircuitBreakerException(
-                "Parsing the created knn vector fields prior to indexing has failed as the circuit breaker triggered.  This indicates that the cluster is low on memory resources and cannot index more documents at the moment. Check _plugins/_knn/stats for the circuit breaker status."
-            );
-        }
     }
 
     /**
@@ -209,7 +197,7 @@ public class KNNVectorFieldMapperUtil {
         SpaceType resolvedSpaceType
     ) {
         return new KNNMethodContext(
-            KNNEngine.NMSLIB,
+            KNNEngine.LUCENE,
             resolvedSpaceType,
             new MethodComponentContext(
                 METHOD_HNSW,

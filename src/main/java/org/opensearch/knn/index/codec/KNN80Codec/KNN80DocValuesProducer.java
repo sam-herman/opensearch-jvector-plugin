@@ -17,21 +17,14 @@ import org.apache.lucene.index.*;
 
 import java.io.IOException;
 
-import org.opensearch.knn.index.codec.util.KNNCodecUtil;
-import org.opensearch.knn.index.codec.util.NativeMemoryCacheKeyHelper;
-import org.opensearch.knn.index.memory.NativeMemoryCacheManager;
-
-import java.util.ArrayList;
 import java.util.List;
 
 @Log4j2
 public class KNN80DocValuesProducer extends DocValuesProducer {
     private final DocValuesProducer delegate;
-    private List<String> cacheKeys;
 
     public KNN80DocValuesProducer(DocValuesProducer delegate, SegmentReadState state) {
         this.delegate = delegate;
-        this.cacheKeys = getVectorCacheKeysFromSegmentReaderState(state);
     }
 
     @Override
@@ -78,35 +71,10 @@ public class KNN80DocValuesProducer extends DocValuesProducer {
 
     @Override
     public void close() throws IOException {
-        final NativeMemoryCacheManager nativeMemoryCacheManager = NativeMemoryCacheManager.getInstance();
-        cacheKeys.forEach(nativeMemoryCacheManager::invalidate);
         delegate.close();
     }
 
-    public final List<String> getCacheKeys() {
-        return new ArrayList<>(cacheKeys);
-    }
-
     private static List<String> getVectorCacheKeysFromSegmentReaderState(SegmentReadState segmentReadState) {
-        final List<String> cacheKeys = new ArrayList<>();
-
-        for (FieldInfo field : segmentReadState.fieldInfos) {
-            // Only segments that contains BinaryDocValues and doesn't have vector values should be considered.
-            // By default, we don't create BinaryDocValues for knn field anymore. However, users can set doc_values = true
-            // to create binary doc values explicitly like any other field. Hence, we only want to include fields
-            // where approximate search is possible only by BinaryDocValues.
-            if (field.getDocValuesType() != DocValuesType.BINARY || field.hasVectorValues()) {
-                continue;
-            }
-
-            final String vectorIndexFileName = KNNCodecUtil.getNativeEngineFileFromFieldInfo(field, segmentReadState.segmentInfo);
-            if (vectorIndexFileName == null) {
-                continue;
-            }
-            final String cacheKey = NativeMemoryCacheKeyHelper.constructCacheKey(vectorIndexFileName, segmentReadState.segmentInfo);
-            cacheKeys.add(cacheKey);
-        }
-
-        return cacheKeys;
+        throw new UnsupportedOperationException("Unsupported operation");
     }
 }

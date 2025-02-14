@@ -14,7 +14,6 @@ package org.opensearch.knn.training;
 import lombok.Getter;
 import lombok.Setter;
 import org.opensearch.action.search.SearchResponse;
-import org.opensearch.knn.index.memory.NativeMemoryAllocation;
 import org.opensearch.search.SearchHit;
 
 import java.util.List;
@@ -29,16 +28,6 @@ public abstract class TrainingDataConsumer {
     @Setter
     @Getter
     private int totalVectorsCountAdded = 0;
-    protected final NativeMemoryAllocation.TrainingDataAllocation trainingDataAllocation;
-
-    /**
-     * Constructor
-     *
-     * @param trainingDataAllocation NativeMemoryAllocation that contains information about native memory allocation.
-     */
-    public TrainingDataConsumer(NativeMemoryAllocation.TrainingDataAllocation trainingDataAllocation) {
-        this.trainingDataAllocation = trainingDataAllocation;
-    }
 
     protected abstract void accept(List<?> vectors);
 

@@ -22,8 +22,6 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.unit.ByteSizeUnit;
 import org.opensearch.core.common.unit.ByteSizeValue;
 import org.opensearch.index.IndexModule;
-import org.opensearch.knn.index.memory.NativeMemoryCacheManager;
-import org.opensearch.knn.index.memory.NativeMemoryCacheManagerDto;
 import org.opensearch.knn.index.util.IndexHyperParametersUtil;
 import org.opensearch.knn.quantization.models.quantizationState.QuantizationStateCacheManager;
 import org.opensearch.monitor.jvm.JvmInfo;
@@ -423,31 +421,12 @@ public class KNNSettings {
     }
 
     private void setSettingsUpdateConsumers() {
-        clusterService.getClusterSettings().addSettingsUpdateConsumer(updatedSettings -> {
-            // When any of the dynamic settings are updated, rebuild the cache with the updated values. Use the current
-            // cluster settings values as defaults.
-            NativeMemoryCacheManagerDto.NativeMemoryCacheManagerDtoBuilder builder = NativeMemoryCacheManagerDto.builder();
-
-            builder.isWeightLimited(
-                updatedSettings.getAsBoolean(KNN_MEMORY_CIRCUIT_BREAKER_ENABLED, getSettingValue(KNN_MEMORY_CIRCUIT_BREAKER_ENABLED))
+        clusterService.getClusterSettings()
+            .addSettingsUpdateConsumer(
+                updatedSettings -> {},
+                Stream.concat(dynamicCacheSettings.values().stream(), FEATURE_FLAGS.values().stream())
+                    .collect(Collectors.toUnmodifiableList())
             );
-
-            builder.maxWeight(((ByteSizeValue) getSettingValue(KNN_MEMORY_CIRCUIT_BREAKER_LIMIT)).getKb());
-            if (updatedSettings.hasValue(KNN_MEMORY_CIRCUIT_BREAKER_LIMIT)) {
-                builder.maxWeight(((ByteSizeValue) getSetting(KNN_MEMORY_CIRCUIT_BREAKER_LIMIT).get(updatedSettings)).getKb());
-            }
-
-            builder.isExpirationLimited(
-                updatedSettings.getAsBoolean(KNN_CACHE_ITEM_EXPIRY_ENABLED, getSettingValue(KNN_CACHE_ITEM_EXPIRY_ENABLED))
-            );
-
-            builder.expiryTimeInMin(
-                updatedSettings.getAsTime(KNN_CACHE_ITEM_EXPIRY_TIME_MINUTES, getSettingValue(KNN_CACHE_ITEM_EXPIRY_TIME_MINUTES))
-                    .getMinutes()
-            );
-
-            NativeMemoryCacheManager.getInstance().rebuildCache(builder.build());
-        }, Stream.concat(dynamicCacheSettings.values().stream(), FEATURE_FLAGS.values().stream()).collect(Collectors.toUnmodifiableList()));
         clusterService.getClusterSettings().addSettingsUpdateConsumer(QUANTIZATION_STATE_CACHE_SIZE_LIMIT_SETTING, it -> {
             quantizationStateCacheManager.setMaxCacheSizeInKB(it.getKb());
             quantizationStateCacheManager.rebuildCache();
@@ -726,8 +705,6 @@ public class KNNSettings {
     public void onIndexModule(IndexModule module) {
         module.addSettingsUpdateConsumer(INDEX_KNN_ALGO_PARAM_EF_SEARCH_SETTING, newVal -> {
             logger.debug("The value of [KNN] setting [{}] changed to [{}]", KNN_ALGO_PARAM_EF_SEARCH, newVal);
-            // TODO: replace cache-rebuild with index reload into the cache
-            NativeMemoryCacheManager.getInstance().rebuildCache();
         });
     }
 

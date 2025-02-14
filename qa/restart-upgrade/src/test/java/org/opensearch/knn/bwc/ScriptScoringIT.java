@@ -23,6 +23,7 @@ import java.util.Map;
 
 import static org.opensearch.knn.TestUtils.FIELD;
 import static org.opensearch.knn.TestUtils.QUERY_VALUE;
+import static org.opensearch.knn.common.KNNConstants.DISK_ANN;
 import static org.opensearch.knn.common.KNNConstants.METHOD_PARAMETER_SPACE_TYPE;
 
 public class ScriptScoringIT extends AbstractRestartUpgradeTestCase {
@@ -86,7 +87,7 @@ public class ScriptScoringIT extends AbstractRestartUpgradeTestCase {
             createKnnIndex(
                 testIndex,
                 createKNNDefaultScriptScoreSettings(),
-                createKnnIndexMapping(TEST_FIELD, DIMENSIONS, "hnsw", KNNEngine.FAISS.getName(), SpaceType.DEFAULT.getValue(), false)
+                createKnnIndexMapping(TEST_FIELD, DIMENSIONS, DISK_ANN, KNNEngine.JVECTOR.getName(), SpaceType.DEFAULT.getValue(), false)
             );
             addKNNDocs(testIndex, TEST_FIELD, DIMENSIONS, DOC_ID, NUM_DOCS);
         } else {
@@ -105,7 +106,7 @@ public class ScriptScoringIT extends AbstractRestartUpgradeTestCase {
             createKnnIndex(
                 testIndex,
                 createKNNDefaultScriptScoreSettings(),
-                createKnnIndexMapping(TEST_FIELD, DIMENSIONS, "hnsw", KNNEngine.NMSLIB.getName(), SpaceType.DEFAULT.getValue(), false)
+                createKnnIndexMapping(TEST_FIELD, DIMENSIONS, DISK_ANN, KNNEngine.JVECTOR.getName(), SpaceType.DEFAULT.getValue(), false)
             );
             addKNNDocs(testIndex, TEST_FIELD, DIMENSIONS, DOC_ID, NUM_DOCS);
         } else {

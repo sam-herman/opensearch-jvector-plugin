@@ -7,8 +7,6 @@ package org.opensearch.knn.training;
 
 import lombok.extern.log4j.Log4j2;
 import org.opensearch.action.search.SearchResponse;
-import org.opensearch.knn.index.memory.NativeMemoryAllocation;
-import org.opensearch.knn.jni.JNICommons;
 import org.opensearch.search.SearchHit;
 
 import java.util.ArrayList;
@@ -23,18 +21,13 @@ public class BinaryTrainingDataConsumer extends TrainingDataConsumer {
     /**
      * Constructor
      *
-     * @param trainingDataAllocation NativeMemoryAllocation that contains information about native memory allocation.
      */
-    public BinaryTrainingDataConsumer(NativeMemoryAllocation.TrainingDataAllocation trainingDataAllocation) {
-        super(trainingDataAllocation);
+    public BinaryTrainingDataConsumer() {
+        super();
     }
 
     @Override
-    public void accept(List<?> byteVectors) {
-        long memoryAddress = trainingDataAllocation.getMemoryAddress();
-        memoryAddress = JNICommons.storeBinaryVectorData(memoryAddress, byteVectors.toArray(new byte[0][0]), byteVectors.size());
-        trainingDataAllocation.setMemoryAddress(memoryAddress);
-    }
+    public void accept(List<?> byteVectors) {}
 
     @Override
     public void processTrainingVectors(SearchResponse searchResponse, int vectorsToAdd, String fieldName) {

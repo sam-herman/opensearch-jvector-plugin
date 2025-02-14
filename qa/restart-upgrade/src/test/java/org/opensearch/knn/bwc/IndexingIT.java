@@ -28,20 +28,7 @@ import static org.opensearch.knn.TestUtils.KNN_VECTOR;
 import static org.opensearch.knn.TestUtils.NODES_BWC_CLUSTER;
 import static org.opensearch.knn.TestUtils.PROPERTIES;
 import static org.opensearch.knn.TestUtils.VECTOR_TYPE;
-import static org.opensearch.knn.common.KNNConstants.DIMENSION;
-import static org.opensearch.knn.common.KNNConstants.FAISS_NAME;
-import static org.opensearch.knn.common.KNNConstants.KNN_ENGINE;
-import static org.opensearch.knn.common.KNNConstants.KNN_METHOD;
-import static org.opensearch.knn.common.KNNConstants.LUCENE_NAME;
-import static org.opensearch.knn.common.KNNConstants.METHOD_HNSW;
-import static org.opensearch.knn.common.KNNConstants.METHOD_PARAMETER_EF_CONSTRUCTION;
-import static org.opensearch.knn.common.KNNConstants.METHOD_PARAMETER_EF_SEARCH;
-import static org.opensearch.knn.common.KNNConstants.METHOD_PARAMETER_M;
-import static org.opensearch.knn.common.KNNConstants.METHOD_PARAMETER_SPACE_TYPE;
-import static org.opensearch.knn.common.KNNConstants.METHOD_ENCODER_PARAMETER;
-import static org.opensearch.knn.common.KNNConstants.ENCODER_SQ;
-import static org.opensearch.knn.common.KNNConstants.NAME;
-import static org.opensearch.knn.common.KNNConstants.PARAMETERS;
+import static org.opensearch.knn.common.KNNConstants.*;
 
 public class IndexingIT extends AbstractRestartUpgradeTestCase {
     private static final String TEST_FIELD = "test-field";
@@ -93,20 +80,6 @@ public class IndexingIT extends AbstractRestartUpgradeTestCase {
 
         if (isRunningAgainstOldCluster()) {
             createKnnIndex(testIndex, getKNNDefaultIndexSettings(), createKnnIndexMapping(TEST_FIELD, DIMENSIONS));
-            addKNNDocs(testIndex, TEST_FIELD, DIMENSIONS, DOC_ID, 100);
-            // Flush to ensure that index is not re-indexed when node comes back up
-            flush(testIndex, true);
-            validateKNNSearch(testIndex, TEST_FIELD, DIMENSIONS, 100, K);
-        } else {
-            validateKNNIndexingOnUpgrade(100);
-        }
-    }
-
-    public void testKNNIndexFaissForceMerge() throws Exception {
-        waitForClusterHealthGreen(NODES_BWC_CLUSTER);
-
-        if (isRunningAgainstOldCluster()) {
-            createKnnIndex(testIndex, getKNNDefaultIndexSettings(), createKnnIndexMapping(TEST_FIELD, DIMENSIONS, METHOD_HNSW, FAISS_NAME));
             addKNNDocs(testIndex, TEST_FIELD, DIMENSIONS, DOC_ID, 100);
             // Flush to ensure that index is not re-indexed when node comes back up
             flush(testIndex, true);
@@ -248,7 +221,7 @@ public class IndexingIT extends AbstractRestartUpgradeTestCase {
                     TEST_FIELD,
                     dimension,
                     METHOD_HNSW,
-                    KNNEngine.FAISS.getName(),
+                    KNNEngine.LUCENE.getName(),
                     SpaceType.HAMMING.getValue(),
                     true,
                     VectorDataType.BINARY
@@ -306,7 +279,7 @@ public class IndexingIT extends AbstractRestartUpgradeTestCase {
                     TEST_FIELD,
                     DIMENSIONS,
                     SpaceType.INNER_PRODUCT,
-                    FAISS_NAME,
+                    JVECTOR_NAME,
                     M,
                     EF_CONSTRUCTION,
                     EF_SEARCH
@@ -325,9 +298,9 @@ public class IndexingIT extends AbstractRestartUpgradeTestCase {
         final Map<String, Object> knnMethod = ((Map<String, Object>) ((Map<String, Object>) properties.get(TEST_FIELD)).get(KNN_METHOD));
         final Map<String, Object> methodParameters = (Map<String, Object>) knnMethod.get(PARAMETERS);
 
-        Assert.assertEquals(METHOD_HNSW, knnMethod.get(NAME));
+        Assert.assertEquals(DISK_ANN, knnMethod.get(NAME));
         Assert.assertEquals(SpaceType.INNER_PRODUCT.getValue(), knnMethod.get(METHOD_PARAMETER_SPACE_TYPE));
-        Assert.assertEquals(FAISS_NAME, knnMethod.get(KNN_ENGINE));
+        Assert.assertEquals(JVECTOR_NAME, knnMethod.get(KNN_ENGINE));
         Assert.assertEquals(EF_CONSTRUCTION, ((Integer) methodParameters.get(METHOD_PARAMETER_EF_CONSTRUCTION)).intValue());
         Assert.assertEquals(EF_SEARCH, ((Integer) methodParameters.get(METHOD_PARAMETER_EF_SEARCH)).intValue());
         Assert.assertEquals(M, ((Integer) methodParameters.get(METHOD_PARAMETER_M)).intValue());

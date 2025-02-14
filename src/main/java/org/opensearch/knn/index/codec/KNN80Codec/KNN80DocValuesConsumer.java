@@ -19,7 +19,6 @@ import org.apache.lucene.index.DocValuesType;
 import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.MergeState;
 import org.apache.lucene.index.SegmentWriteState;
-import org.opensearch.knn.index.codec.nativeindex.NativeIndexWriter;
 import org.opensearch.knn.index.mapper.KNNVectorFieldMapper;
 import org.opensearch.knn.plugin.stats.KNNGraphValue;
 
@@ -68,14 +67,6 @@ class KNN80DocValuesConsumer extends DocValuesConsumer {
     public void addKNNBinaryField(FieldInfo field, DocValuesProducer valuesProducer, boolean isMerge) throws IOException {
         final VectorDataType vectorDataType = extractVectorDataType(field);
         final KNNVectorValues<?> knnVectorValues = KNNVectorValuesFactory.getVectorValues(vectorDataType, valuesProducer.getBinary(field));
-
-        // For BDV it is fine to use knnVectorValues.totalLiveDocs() as we already run the full loop to calculate total
-        // live docs
-        if (isMerge) {
-            NativeIndexWriter.getWriter(field, state).mergeIndex(knnVectorValues, (int) knnVectorValues.totalLiveDocs());
-        } else {
-            NativeIndexWriter.getWriter(field, state).flushIndex(knnVectorValues, (int) knnVectorValues.totalLiveDocs());
-        }
     }
 
     /**

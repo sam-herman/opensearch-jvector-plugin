@@ -8,18 +8,15 @@ package org.opensearch.knn.index.engine;
 import com.google.common.collect.ImmutableSet;
 import org.opensearch.common.ValidationException;
 import org.opensearch.knn.index.SpaceType;
-import org.opensearch.knn.index.engine.faiss.Faiss;
 import org.opensearch.knn.index.engine.lucene.Lucene;
-import org.opensearch.knn.index.engine.nmslib.Nmslib;
 import org.opensearch.knn.index.codec.jvector.JVector;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.opensearch.knn.common.KNNConstants.FAISS_NAME;
 import static org.opensearch.knn.common.KNNConstants.LUCENE_NAME;
-import static org.opensearch.knn.common.KNNConstants.NMSLIB_NAME;
 import static org.opensearch.knn.common.KNNConstants.JVECTOR_NAME;
 
 /**
@@ -27,25 +24,15 @@ import static org.opensearch.knn.common.KNNConstants.JVECTOR_NAME;
  * passed to the respective k-NN library's JNI layer.
  */
 public enum KNNEngine implements KNNLibrary {
-    NMSLIB(NMSLIB_NAME, Nmslib.INSTANCE),
-    FAISS(FAISS_NAME, Faiss.INSTANCE),
     LUCENE(LUCENE_NAME, Lucene.INSTANCE),
     JVECTOR(JVECTOR_NAME, JVector.INSTANCE);
 
-    public static final KNNEngine DEFAULT = FAISS;
+    public static final KNNEngine DEFAULT = JVECTOR;
 
-    private static final Set<KNNEngine> CUSTOM_SEGMENT_FILE_ENGINES = ImmutableSet.of(KNNEngine.NMSLIB, KNNEngine.FAISS);
-    private static final Set<KNNEngine> ENGINES_SUPPORTING_FILTERS = ImmutableSet.of(KNNEngine.LUCENE, KNNEngine.FAISS);
-    public static final Set<KNNEngine> ENGINES_SUPPORTING_RADIAL_SEARCH = ImmutableSet.of(KNNEngine.LUCENE, KNNEngine.FAISS);
+    private static final Set<KNNEngine> ENGINES_SUPPORTING_FILTERS = ImmutableSet.of(KNNEngine.LUCENE);
+    public static final Set<KNNEngine> ENGINES_SUPPORTING_RADIAL_SEARCH = ImmutableSet.of(KNNEngine.LUCENE);
 
-    private static Map<KNNEngine, Integer> MAX_DIMENSIONS_BY_ENGINE = Map.of(
-        KNNEngine.NMSLIB,
-        16_000,
-        KNNEngine.FAISS,
-        16_000,
-        KNNEngine.LUCENE,
-        16_000
-    );
+    private static Map<KNNEngine, Integer> MAX_DIMENSIONS_BY_ENGINE = Map.of(KNNEngine.LUCENE, 16_000, KNNEngine.JVECTOR, 16_000);
 
     /**
      * Constructor for KNNEngine
@@ -68,14 +55,6 @@ public enum KNNEngine implements KNNLibrary {
      * @return KNNEngine corresponding to name
      */
     public static KNNEngine getEngine(String name) {
-        if (NMSLIB.getName().equalsIgnoreCase(name)) {
-            return NMSLIB;
-        }
-
-        if (FAISS.getName().equalsIgnoreCase(name)) {
-            return FAISS;
-        }
-
         if (LUCENE.getName().equalsIgnoreCase(name)) {
             return LUCENE;
         }
@@ -94,14 +73,6 @@ public enum KNNEngine implements KNNLibrary {
      * @return KNNEngine corresponding to path
      */
     public static KNNEngine getEngineNameFromPath(String path) {
-        if (path.endsWith(KNNEngine.NMSLIB.getExtension()) || path.endsWith(KNNEngine.NMSLIB.getCompoundExtension())) {
-            return KNNEngine.NMSLIB;
-        }
-
-        if (path.endsWith(KNNEngine.FAISS.getExtension()) || path.endsWith(KNNEngine.FAISS.getCompoundExtension())) {
-            return KNNEngine.FAISS;
-        }
-
         throw new IllegalArgumentException("No engine matches the path's suffix");
     }
 
@@ -111,7 +82,7 @@ public enum KNNEngine implements KNNLibrary {
      * @return Set of all engines that create custom segment files.
      */
     public static Set<KNNEngine> getEnginesThatCreateCustomSegmentFiles() {
-        return CUSTOM_SEGMENT_FILE_ENGINES;
+        return Collections.emptySet();
     }
 
     public static Set<KNNEngine> getEnginesThatSupportsFilters() {

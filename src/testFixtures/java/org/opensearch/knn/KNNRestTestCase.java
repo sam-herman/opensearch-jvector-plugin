@@ -110,9 +110,6 @@ import static org.opensearch.knn.common.KNNConstants.VECTOR_DATA_TYPE_FIELD;
 import static org.opensearch.knn.index.KNNSettings.INDEX_KNN_ADVANCED_APPROXIMATE_THRESHOLD;
 import static org.opensearch.knn.index.KNNSettings.KNN_INDEX;
 import static org.opensearch.knn.index.SpaceType.L2;
-import static org.opensearch.knn.index.memory.NativeMemoryCacheManager.GRAPH_COUNT;
-import static org.opensearch.knn.index.engine.KNNEngine.FAISS;
-import static org.opensearch.knn.plugin.stats.StatNames.INDICES_IN_CACHE;
 
 /**
  * Base class for integration tests for KNN plugin. Contains several methods for testing KNN ES functionality.
@@ -1151,30 +1148,6 @@ public class KNNRestTestCase extends ODFERestTestCase {
     }
 
     /**
-     * Get the total number of graphs in the cache across all nodes
-     */
-    @SuppressWarnings("unchecked")
-    protected int getTotalGraphsInCache() throws Exception {
-        Response response = getKnnStats(Collections.emptyList(), Collections.emptyList());
-        String responseBody = EntityUtils.toString(response.getEntity());
-
-        List<Map<String, Object>> nodesStats = parseNodeStatsResponse(responseBody);
-
-        logger.info("[KNN] Node stats:  " + nodesStats);
-
-        return nodesStats.stream()
-            .filter(nodeStats -> nodeStats.get(INDICES_IN_CACHE.getName()) != null)
-            .map(nodeStats -> nodeStats.get(INDICES_IN_CACHE.getName()))
-            .mapToInt(
-                nodeIndicesStats -> ((Map<String, Map<String, Object>>) nodeIndicesStats).values()
-                    .stream()
-                    .mapToInt(nodeIndexStats -> (int) nodeIndexStats.get(GRAPH_COUNT))
-                    .sum()
-            )
-            .sum();
-    }
-
-    /**
      * Get specific Index setting value from response
      */
     protected String getIndexSettingByName(String indexName, String settingName) throws IOException {
@@ -2151,7 +2124,6 @@ public class KNNRestTestCase extends ODFERestTestCase {
         XContentBuilder modelMethodBuilder = XContentFactory.jsonBuilder()
             .startObject()
             .field(NAME, "ivf")
-            .field(KNN_ENGINE, FAISS.getName())
             .field(METHOD_PARAMETER_SPACE_TYPE, L2.getValue())
             .startObject(PARAMETERS)
             .field(METHOD_PARAMETER_NLIST, 1)

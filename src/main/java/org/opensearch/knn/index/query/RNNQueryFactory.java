@@ -16,9 +16,6 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.lucene.search.ByteVectorSimilarityQuery;
 import org.apache.lucene.search.FloatVectorSimilarityQuery;
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.join.BitSetProducer;
-import org.opensearch.index.IndexSettings;
-import org.opensearch.index.query.QueryShardContext;
 import org.opensearch.knn.index.VectorDataType;
 import org.opensearch.knn.index.engine.KNNEngine;
 
@@ -71,29 +68,6 @@ public class RNNQueryFactory extends BaseQueryFactory {
         final VectorDataType vectorDataType = createQueryRequest.getVectorDataType();
         final Query filterQuery = getFilterQuery(createQueryRequest);
         final Map<String, ?> methodParameters = createQueryRequest.getMethodParameters();
-
-        if (KNNEngine.getEnginesThatCreateCustomSegmentFiles().contains(createQueryRequest.getKnnEngine())) {
-            BitSetProducer parentFilter = null;
-            QueryShardContext context = createQueryRequest.getContext().get();
-
-            if (createQueryRequest.getContext().isPresent()) {
-                parentFilter = context.getParentFilter();
-            }
-            IndexSettings indexSettings = context.getIndexSettings();
-            KNNQuery.Context knnQueryContext = new KNNQuery.Context(indexSettings.getMaxResultWindow());
-
-            return KNNQuery.builder()
-                .field(fieldName)
-                .queryVector(vector)
-                .indexName(indexName)
-                .parentsFilter(parentFilter)
-                .radius(radius)
-                .vectorDataType(vectorDataType)
-                .methodParameters(methodParameters)
-                .context(knnQueryContext)
-                .filterQuery(filterQuery)
-                .build();
-        }
 
         log.debug(String.format("Creating Lucene r-NN query for index: %s \"\", field: %s \"\", k: %f", indexName, fieldName, radius));
         switch (vectorDataType) {

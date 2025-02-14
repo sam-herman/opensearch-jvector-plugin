@@ -14,7 +14,6 @@ import org.opensearch.knn.index.SpaceType;
 import org.opensearch.knn.index.VectorDataType;
 import org.opensearch.knn.index.mapper.KNNVectorFieldMapperUtil;
 import org.opensearch.knn.index.mapper.KNNVectorFieldType;
-import org.opensearch.knn.index.query.KNNWeight;
 import org.opensearch.script.ScoreScript;
 import org.opensearch.search.lookup.SearchLookup;
 
@@ -202,8 +201,13 @@ public interface KNNScoringSpace {
 
         @Override
         protected BiFunction<float[], float[], Float> getScoringMethod(final float[] processedQuery) {
-            return (float[] q, float[] v) -> KNNWeight.normalizeScore(-KNNScoringUtil.innerProduct(q, v));
+            return (float[] q, float[] v) -> normalizeScore(-KNNScoringUtil.innerProduct(q, v));
         }
+    }
+
+    static float normalizeScore(float score) {
+        if (score >= 0) return 1 / (1 + score);
+        return -score + 1;
     }
 
     class Hamming extends KNNFieldSpace {

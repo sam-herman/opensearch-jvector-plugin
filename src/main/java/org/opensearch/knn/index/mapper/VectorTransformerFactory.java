@@ -38,6 +38,6 @@ public final class VectorTransformerFactory {
     }
 
     private static boolean shouldNormalizeVector(final KNNEngine knnEngine, final SpaceType spaceType) {
-        return knnEngine == KNNEngine.FAISS && spaceType == SpaceType.COSINESIMIL;
+        return false;
     }
 }

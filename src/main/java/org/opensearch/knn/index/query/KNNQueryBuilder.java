@@ -10,8 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang.StringUtils;
-import org.apache.lucene.search.MatchNoDocsQuery;
-import org.apache.lucene.search.Query;
+import org.apache.lucene.search.*;
 import org.opensearch.common.ValidationException;
 import org.opensearch.core.ParseField;
 import org.opensearch.core.common.Strings;
@@ -383,7 +382,7 @@ public class KNNQueryBuilder extends AbstractQueryBuilder<KNNQueryBuilder> imple
     }
 
     @Override
-    protected Query doToQuery(QueryShardContext context) {
+    protected Query doToQuery(QueryShardContext context) throws IOException {
         MappedFieldType mappedFieldType = context.fieldMapper(this.fieldName);
 
         if (mappedFieldType == null && ignoreUnmapped) {
@@ -540,6 +539,7 @@ public class KNNQueryBuilder extends AbstractQueryBuilder<KNNQueryBuilder> imple
         String indexName = context.index().getName();
 
         if (k != 0) {
+            /*
             KNNQueryFactory.CreateQueryRequest createQueryRequest = KNNQueryFactory.CreateQueryRequest.builder()
                 .knnEngine(knnEngine)
                 .indexName(indexName)
@@ -553,8 +553,22 @@ public class KNNQueryBuilder extends AbstractQueryBuilder<KNNQueryBuilder> imple
                 .context(context)
                 .rescoreContext(processedRescoreContext)
                 .expandNested(expandNested)
-                .build();
-            return KNNQueryFactory.create(createQueryRequest);
+                .build();*/
+            final Query filterQuery;
+            if (this.filter != null) {
+                filterQuery = this.filter.toQuery(context);
+            } else {
+                filterQuery = new MatchAllDocsQuery();
+            }
+            if (byteVector.length > 0) {
+                byte[] target = getVectorForCreatingQueryRequest(vectorDataType, knnEngine, byteVector);
+                assert target != null;
+                return new KnnByteVectorQuery(this.fieldName, target, k, filterQuery);
+            } else {
+                float[] target = getVectorForCreatingQueryRequest(vectorDataType, knnEngine);
+                assert target != null;
+                return new KnnFloatVectorQuery(this.fieldName, target, k, filterQuery);
+            }
         }
         if (radius != null) {
             RNNQueryFactory.CreateQueryRequest createQueryRequest = RNNQueryFactory.CreateQueryRequest.builder()
@@ -615,7 +629,7 @@ public class KNNQueryBuilder extends AbstractQueryBuilder<KNNQueryBuilder> imple
     }
 
     private float[] getVectorForCreatingQueryRequest(VectorDataType vectorDataType, KNNEngine knnEngine) {
-        if ((VectorDataType.FLOAT == vectorDataType) || (VectorDataType.BYTE == vectorDataType && KNNEngine.FAISS == knnEngine)) {
+        if ((VectorDataType.FLOAT == vectorDataType)) {
             return this.vector;
         }
         return null;
