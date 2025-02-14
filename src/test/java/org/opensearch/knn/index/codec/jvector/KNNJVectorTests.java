@@ -471,4 +471,62 @@ public class KNNJVectorTests extends LuceneTestCase {
         }
     }
 
+    /**
+     * Test to verify that the JVector codec is able to successfully search for the nearest neighbours
+     * in the index with a filter applied.
+     */
+    @Test
+    public void testJVectorKnnIndex_withFilter() throws IOException {
+        int k = 3; // The number of nearest neighbours to gather
+        int totalNumberOfDocs = 10;
+        IndexWriterConfig indexWriterConfig = LuceneTestCase.newIndexWriterConfig();
+        // TODO: re-enable this after fixing the compound file augmentation for JVector
+        indexWriterConfig.setUseCompoundFile(false);
+        indexWriterConfig.setCodec(new JVectorCodec());
+        indexWriterConfig.setMergePolicy(new ForceMergesOnlyMergePolicy());
+        final Path indexPath = createTempDir();
+        log.info("Index path: {}", indexPath);
+        try (Directory dir = newFSDirectory(indexPath); RandomIndexWriter w = new RandomIndexWriter(random(), dir, indexWriterConfig)) {
+            final float[] target = new float[] { 0.0f, 0.0f };
+            for (int i = 1; i < totalNumberOfDocs + 1; i++) {
+                final float[] source = new float[] { 0.0f, 1.0f / i };
+                final Document doc = new Document();
+                doc.add(new KnnFloatVectorField("test_field", source, VectorSimilarityFunction.EUCLIDEAN));
+                doc.add(new StringField("filter_field", i % 2 == 0 ? "even" : "odd", Field.Store.YES));
+                w.addDocument(doc);
+            }
+            log.info("Flushing docs to make them discoverable on the file system");
+            w.commit();
+
+            try (IndexReader reader = w.getReader()) {
+                log.info("Applying filter to the KNN search");
+                final Query filterQuery = new TermQuery(new Term("filter_field", "even"));
+                final IndexSearcher searcher = newSearcher(reader);
+                KnnFloatVectorQuery knnFloatVectorQuery = new KnnFloatVectorQuery("test_field", target, k, filterQuery);
+                TopDocs topDocs = searcher.search(knnFloatVectorQuery, k);
+
+                log.info("Validating filtered KNN results");
+                assertEquals(k, topDocs.totalHits.value());
+                assertEquals(9, topDocs.scoreDocs[0].doc);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 1.0f / 10.0f }),
+                    topDocs.scoreDocs[0].score,
+                    0.001f
+                );
+                assertEquals(7, topDocs.scoreDocs[1].doc);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 1.0f / 8.0f }),
+                    topDocs.scoreDocs[1].score,
+                    0.001f
+                );
+                assertEquals(5, topDocs.scoreDocs[2].doc);
+                Assert.assertEquals(
+                    VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 1.0f / 6.0f }),
+                    topDocs.scoreDocs[2].score,
+                    0.001f
+                );
+                log.info("successfully completed filtered search tests");
+            }
+        }
+    }
 }

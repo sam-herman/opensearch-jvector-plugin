@@ -15,7 +15,7 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.knn.index.SpaceType;
-import org.opensearch.knn.plugin.KNNPlugin;
+import org.opensearch.knn.plugin.JVectorKNNPlugin;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 
@@ -175,7 +175,7 @@ public class ModelIT extends AbstractRestartUpgradeTestCase {
 
     // Delete model by taking modelId as input parameter
     public static void deleteKNNModel(String modelId) throws IOException {
-        String restURI = String.join("/", KNNPlugin.KNN_BASE_URI, MODELS, modelId);
+        String restURI = String.join("/", JVectorKNNPlugin.KNN_BASE_URI, MODELS, modelId);
         Request request = new Request("DELETE", restURI);
 
         Response response = client().performRequest(request);
@@ -183,7 +183,7 @@ public class ModelIT extends AbstractRestartUpgradeTestCase {
     }
 
     public void searchKNNModel(String testModelID) throws Exception {
-        String restURI = String.join("/", KNNPlugin.KNN_BASE_URI, MODELS, "_search");
+        String restURI = String.join("/", JVectorKNNPlugin.KNN_BASE_URI, MODELS, "_search");
 
         for (String method : Arrays.asList("GET", "POST")) {
             Request request = new Request(method, restURI);

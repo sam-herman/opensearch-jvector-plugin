@@ -111,7 +111,11 @@ public class JVectorReader extends KnnVectorsReader {
         VectorFloat<?> q = VECTOR_TYPE_SUPPORT.createFloatVector(target);
         try (GraphSearcher searcher = new GraphSearcher(index)) {
             SearchScoreProvider ssp = SearchScoreProvider.exact(q, fieldEntryMap.get(field).similarityFunction, index.getView());
-            SearchResult sr = searcher.search(ssp, knnCollector.k(), io.github.jbellis.jvector.util.Bits.ALL);
+
+            // Adapt acceptDocs to io.github.jbellis.jvector.util.Bits
+            io.github.jbellis.jvector.util.Bits compatibleBits = doc -> acceptDocs == null || acceptDocs.get(doc);
+
+            SearchResult sr = searcher.search(ssp, knnCollector.k(), compatibleBits);
             for (SearchResult.NodeScore ns : sr.getNodes()) {
                 knnCollector.collect(ns.node, ns.score);
             }
