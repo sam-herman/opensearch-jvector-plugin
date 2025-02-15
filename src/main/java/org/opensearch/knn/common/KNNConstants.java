@@ -92,7 +92,6 @@ public class KNNConstants {
     public static final int LUCENE_SQ_DEFAULT_BITS = 7;
 
     // nmslib specific constants
-    public static final String NMSLIB_NAME = "nmslib";
     public static final String COMMONS_NAME = "common";
     public static final String SPACE_TYPE = "spaceType"; // used as field info key
     public static final String HNSW_ALGO_M = "M";
@@ -101,8 +100,6 @@ public class KNNConstants {
     public static final String INDEX_THREAD_QTY = "indexThreadQty";
 
     // Faiss specific constants
-    public static final String FAISS_NAME = "faiss";
-    public final static String FAISS_EXTENSION = ".faiss";
     public static final String INDEX_DESCRIPTION_PARAMETER = "index_description";
     public static final String METHOD_ENCODER_PARAMETER = "encoder";
     public static final String METHOD_PARAMETER_NPROBES = "nprobes";
@@ -140,16 +137,6 @@ public class KNNConstants {
 
     public static final Float FP16_MAX_VALUE = 65504.0f;
     public static final Float FP16_MIN_VALUE = -65504.0f;
-
-    // Lib names
-    private static final String JNI_LIBRARY_PREFIX = "opensearchknn_";
-    public static final String FAISS_JNI_LIBRARY_NAME = JNI_LIBRARY_PREFIX + FAISS_NAME;
-    public static final String FAISS_AVX2_JNI_LIBRARY_NAME = JNI_LIBRARY_PREFIX + FAISS_NAME + "_avx2";
-    public static final String FAISS_AVX512_JNI_LIBRARY_NAME = JNI_LIBRARY_PREFIX + FAISS_NAME + "_avx512";
-    public static final String FAISS_AVX512_SPR_JNI_LIBRARY_NAME = JNI_LIBRARY_PREFIX + FAISS_NAME + "_avx512_spr";
-    public static final String NMSLIB_JNI_LIBRARY_NAME = JNI_LIBRARY_PREFIX + NMSLIB_NAME;
-
-    public static final String COMMON_JNI_LIBRARY_NAME = JNI_LIBRARY_PREFIX + COMMONS_NAME;
 
     // API Constants
     public static final String CLEAR_CACHE = "clear_cache";
