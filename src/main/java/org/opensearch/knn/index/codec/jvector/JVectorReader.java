@@ -47,11 +47,9 @@ public class JVectorReader extends KnnVectorsReader {
     private final Map<String, FieldEntry> fieldEntryMap = new HashMap<>(1);
     private final Directory directory;
     private final SegmentReadState state;
-    private final boolean quantized;
 
-    public JVectorReader(SegmentReadState state, boolean quantized) throws IOException {
+    public JVectorReader(SegmentReadState state) throws IOException {
         this.state = state;
-        this.quantized = quantized;
         this.fieldInfos = state.fieldInfos;
         this.baseDataFileName = state.segmentInfo.name + "_" + state.segmentSuffix;
         String metaFileName = IndexFileNames.segmentFileName(state.segmentInfo.name, state.segmentSuffix, JVectorFormat.META_EXTENSION);
@@ -113,7 +111,7 @@ public class JVectorReader extends KnnVectorsReader {
         VectorFloat<?> q = VECTOR_TYPE_SUPPORT.createFloatVector(target);
         final SearchScoreProvider ssp;
 
-        if (quantized) {
+        if (fieldEntryMap.get(field).pqVectors != null) { // Quantized, use the precomputed score function
             final PQVectors pqVectors = fieldEntryMap.get(field).pqVectors;
             // SearchScoreProvider that does a first pass with the loaded-in-memory PQVectors,
             // then reranks with the exact vectors that are stored on disk in the index
@@ -231,8 +229,7 @@ public class JVectorReader extends KnnVectorsReader {
             this.index = OnDiskGraphIndex.load(readerSupplier, sliceOffset + vectorIndexOffset);
 
             // If quantized load the compressed product quantized vectors with their codebooks
-            if (quantized) {
-                assert pqCodebooksAndVectorsLength > 0;
+            if (pqCodebooksAndVectorsLength > 0) {
                 assert pqCodebooksAndVectorsOffset > 0;
                 if (pqCodebooksAndVectorsOffset < vectorIndexOffset) {
                     throw new IllegalArgumentException("pqCodebooksAndVectorsOffset must be greater than vectorIndexOffset");

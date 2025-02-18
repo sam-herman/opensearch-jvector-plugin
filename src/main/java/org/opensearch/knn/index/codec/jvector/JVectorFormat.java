@@ -21,45 +21,46 @@ public class JVectorFormat extends KnnVectorsFormat {
     public static final String JVECTOR_FILES_SUFFIX = "jvector";
     public static final String META_EXTENSION = "meta-" + JVECTOR_FILES_SUFFIX;
     public static final String VECTOR_INDEX_EXTENSION = "data-" + JVECTOR_FILES_SUFFIX;
+    public static final int DEFAULT_MINIMUM_BATCH_SIZE_FOR_QUANTIZATION = 1024; // The minimum number of vectors required to trigger
+                                                                                // quantization
     public static final int VERSION_START = 0;
     public static final int VERSION_CURRENT = VERSION_START;
-    public static final int DIRECT_MONOTONIC_BLOCK_SHIFT = 16;
     private static final int DEFAULT_MAX_CONN = 16;
     private static final int DEFAULT_BEAM_WIDTH = 100;
     private static final float DEFAULT_DEGREE_OVERFLOW = 1.2f;
     private static final float DEFAULT_ALPHA = 1.2f;
-    private final boolean quantized;
 
     private final int maxConn;
     private final int beamWidth;
+    private final int minBatchSizeForQuantization;
 
     public JVectorFormat() {
-        this(NAME, DEFAULT_MAX_CONN, DEFAULT_BEAM_WIDTH, false);
+        this(NAME, DEFAULT_MAX_CONN, DEFAULT_BEAM_WIDTH, DEFAULT_MINIMUM_BATCH_SIZE_FOR_QUANTIZATION);
     }
 
-    public JVectorFormat(boolean quantized) {
-        this(NAME, DEFAULT_MAX_CONN, DEFAULT_BEAM_WIDTH, quantized);
+    public JVectorFormat(int minBatchSizeForQuantization) {
+        this(NAME, DEFAULT_MAX_CONN, DEFAULT_BEAM_WIDTH, minBatchSizeForQuantization);
     }
 
     public JVectorFormat(int maxConn, int beamWidth) {
-        this(NAME, maxConn, beamWidth, false);
+        this(NAME, maxConn, beamWidth, DEFAULT_MINIMUM_BATCH_SIZE_FOR_QUANTIZATION);
     }
 
-    public JVectorFormat(String name, int maxConn, int beamWidth, boolean quantized) {
+    public JVectorFormat(String name, int maxConn, int beamWidth, int minBatchSizeForQuantization) {
         super(name);
         this.maxConn = maxConn;
         this.beamWidth = beamWidth;
-        this.quantized = quantized;
+        this.minBatchSizeForQuantization = minBatchSizeForQuantization;
     }
 
     @Override
     public KnnVectorsWriter fieldsWriter(SegmentWriteState state) throws IOException {
-        return new JVectorWriter(state, maxConn, beamWidth, DEFAULT_DEGREE_OVERFLOW, DEFAULT_ALPHA, quantized);
+        return new JVectorWriter(state, maxConn, beamWidth, DEFAULT_DEGREE_OVERFLOW, DEFAULT_ALPHA, minBatchSizeForQuantization);
     }
 
     @Override
     public KnnVectorsReader fieldsReader(SegmentReadState state) throws IOException {
-        return new JVectorReader(state, quantized);
+        return new JVectorReader(state);
     }
 
     @Override

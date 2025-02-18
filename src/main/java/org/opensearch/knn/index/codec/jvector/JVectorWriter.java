@@ -52,7 +52,7 @@ public class JVectorWriter extends KnnVectorsWriter {
     private final int beamWidth;
     private final float degreeOverflow;
     private final float alpha;
-    private final boolean quantized;
+    private final int minimumBatchSizeForQuantization;
 
     private boolean finished = false;
 
@@ -62,14 +62,14 @@ public class JVectorWriter extends KnnVectorsWriter {
         int beamWidth,
         float degreeOverflow,
         float alpha,
-        boolean quantized
+        int minimumBatchSizeForQuantization
     ) throws IOException {
         this.segmentWriteState = segmentWriteState;
         this.maxConn = maxConn;
         this.beamWidth = beamWidth;
         this.degreeOverflow = degreeOverflow;
         this.alpha = alpha;
-        this.quantized = quantized;
+        this.minimumBatchSizeForQuantization = minimumBatchSizeForQuantization;
         String metaFileName = IndexFileNames.segmentFileName(
             segmentWriteState.segmentInfo.name,
             segmentWriteState.segmentSuffix,
@@ -242,8 +242,8 @@ public class JVectorWriter extends KnnVectorsWriter {
             resultBuilder.vectorIndexOffset(startOffset);
             resultBuilder.vectorIndexLength(endGraphOffset - startOffset);
 
-            // If PQ is enabled write the PQ codebooks with the encoded vectors
-            if (quantized) {
+            // If PQ is enabled and we have enough vectors, write the PQ codebooks and compressed vectors
+            if (fieldData.randomAccessVectorValues.size() >= JVectorFormat.DEFAULT_MINIMUM_BATCH_SIZE_FOR_QUANTIZATION) {
                 resultBuilder.pqCodebooksAndVectorsOffset(endGraphOffset);
                 writePQCodebooksAndVectors(randomAccessWriter, fieldData);
                 resultBuilder.pqCodebooksAndVectorsLength(randomAccessWriter.position() - endGraphOffset);

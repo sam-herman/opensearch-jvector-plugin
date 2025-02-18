@@ -14,24 +14,24 @@ import org.apache.lucene.codecs.lucene101.Lucene101Codec;
 public class JVectorCodec extends FilterCodec {
 
     public static final String CODEC_NAME = "JVectorCodec";
-    public final boolean quantized;
+    private int minBatchSizeForQuantization;
 
     public JVectorCodec() {
-        this(CODEC_NAME, new Lucene101Codec(), false);
+        this(CODEC_NAME, new Lucene101Codec(), JVectorFormat.DEFAULT_MINIMUM_BATCH_SIZE_FOR_QUANTIZATION);
     }
 
-    public JVectorCodec(boolean quantized) {
-        this(CODEC_NAME, new Lucene101Codec(), quantized);
+    public JVectorCodec(int minBatchSizeForQuantization) {
+        this(CODEC_NAME, new Lucene101Codec(), minBatchSizeForQuantization);
     }
 
-    public JVectorCodec(String codecName, Codec delegate, boolean quantized) {
+    public JVectorCodec(String codecName, Codec delegate, int minBatchSizeForQuantization) {
         super(codecName, delegate);
-        this.quantized = quantized;
+        this.minBatchSizeForQuantization = minBatchSizeForQuantization;
     }
 
     @Override
     public KnnVectorsFormat knnVectorsFormat() {
-        return new JVectorFormat(quantized);
+        return new JVectorFormat(minBatchSizeForQuantization);
     }
 
     @Override
