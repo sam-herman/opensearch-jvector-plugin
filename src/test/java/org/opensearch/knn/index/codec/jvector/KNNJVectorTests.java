@@ -528,4 +528,60 @@ public class KNNJVectorTests extends LuceneTestCase {
             }
         }
     }
+
+    @Test
+    public void testJVectorKnnIndex_simpleCase_withQuantization() throws IOException {
+        int k = 3; // The number of nearest neighbours to gather
+        int totalNumberOfDocs = 500;
+        IndexWriterConfig indexWriterConfig = LuceneTestCase.newIndexWriterConfig();
+        // TODO: re-enable this after fixing the compound file augmentation for JVector
+        indexWriterConfig.setUseCompoundFile(false);
+        indexWriterConfig.setCodec(new JVectorCodec(true));
+        indexWriterConfig.setMergePolicy(new ForceMergesOnlyMergePolicy());
+        final Path indexPath = createTempDir();
+        log.info("Index path: {}", indexPath);
+        try (Directory dir = newFSDirectory(indexPath); RandomIndexWriter w = new RandomIndexWriter(random(), dir, indexWriterConfig)) {
+            final float[] target = new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f   };
+            for (int i = 1; i < totalNumberOfDocs + 1; i++) {
+                final float[] source = new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f / i };
+                final Document doc = new Document();
+                doc.add(new KnnFloatVectorField("test_field", source, VectorSimilarityFunction.EUCLIDEAN));
+                w.addDocument(doc);
+            }
+            log.info("Flushing docs to make them discoverable on the file system");
+            w.commit();
+
+            try (IndexReader reader = w.getReader()) {
+                log.info("We should now have a single segment with 10 documents");
+                Assert.assertEquals(1, reader.getContext().leaves().size());
+                Assert.assertEquals(totalNumberOfDocs, reader.numDocs());
+
+                final Query filterQuery = new MatchAllDocsQuery();
+                final IndexSearcher searcher = newSearcher(reader);
+                KnnFloatVectorQuery knnFloatVectorQuery = new KnnFloatVectorQuery("test_field", target, k, filterQuery);
+                TopDocs topDocs = searcher.search(knnFloatVectorQuery, k);
+                assertEquals(k, topDocs.totalHits.value());
+                assertEquals(9, topDocs.scoreDocs[0].doc);
+                Assert.assertEquals(
+                        VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f / 10.0f }),
+                        topDocs.scoreDocs[0].score,
+                        0.001f
+                );
+                assertEquals(8, topDocs.scoreDocs[1].doc);
+                Assert.assertEquals(
+                        VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f / 9.0f }),
+                        topDocs.scoreDocs[1].score,
+                        0.001f
+                );
+                assertEquals(7, topDocs.scoreDocs[2].doc);
+                Assert.assertEquals(
+                        VectorSimilarityFunction.EUCLIDEAN.compare(target, new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f / 8.0f }),
+                        topDocs.scoreDocs[2].score,
+                        0.001f
+                );
+                log.info("successfully completed search tests");
+            }
+        }
+    }
+
 }

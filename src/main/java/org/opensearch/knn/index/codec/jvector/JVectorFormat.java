@@ -28,32 +28,38 @@ public class JVectorFormat extends KnnVectorsFormat {
     private static final int DEFAULT_BEAM_WIDTH = 100;
     private static final float DEFAULT_DEGREE_OVERFLOW = 1.2f;
     private static final float DEFAULT_ALPHA = 1.2f;
+    private final boolean quantized;
 
     private final int maxConn;
     private final int beamWidth;
 
     public JVectorFormat() {
-        this(NAME, DEFAULT_MAX_CONN, DEFAULT_BEAM_WIDTH);
+        this(NAME, DEFAULT_MAX_CONN, DEFAULT_BEAM_WIDTH, false);
+    }
+
+    public JVectorFormat(boolean quantized) {
+        this(NAME, DEFAULT_MAX_CONN, DEFAULT_BEAM_WIDTH, quantized);
     }
 
     public JVectorFormat(int maxConn, int beamWidth) {
-        this(NAME, maxConn, beamWidth);
+        this(NAME, maxConn, beamWidth, false);
     }
 
-    public JVectorFormat(String name, int maxConn, int beamWidth) {
+    public JVectorFormat(String name, int maxConn, int beamWidth, boolean quantized) {
         super(name);
         this.maxConn = maxConn;
         this.beamWidth = beamWidth;
+        this.quantized = quantized;
     }
 
     @Override
     public KnnVectorsWriter fieldsWriter(SegmentWriteState state) throws IOException {
-        return new JVectorWriter(state, maxConn, beamWidth, DEFAULT_DEGREE_OVERFLOW, DEFAULT_ALPHA);
+        return new JVectorWriter(state, maxConn, beamWidth, DEFAULT_DEGREE_OVERFLOW, DEFAULT_ALPHA, quantized);
     }
 
     @Override
     public KnnVectorsReader fieldsReader(SegmentReadState state) throws IOException {
-        return new JVectorReader(state);
+        return new JVectorReader(state, quantized);
     }
 
     @Override

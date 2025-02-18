@@ -9,7 +9,9 @@ import io.github.jbellis.jvector.disk.ReaderSupplier;
 import io.github.jbellis.jvector.graph.GraphSearcher;
 import io.github.jbellis.jvector.graph.SearchResult;
 import io.github.jbellis.jvector.graph.disk.OnDiskGraphIndex;
+import io.github.jbellis.jvector.graph.similarity.ScoreFunction;
 import io.github.jbellis.jvector.graph.similarity.SearchScoreProvider;
+import io.github.jbellis.jvector.quantization.PQVectors;
 import io.github.jbellis.jvector.vector.VectorizationProvider;
 import io.github.jbellis.jvector.vector.types.VectorFloat;
 import io.github.jbellis.jvector.vector.types.VectorTypeSupport;
@@ -33,8 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.apache.lucene.codecs.lucene99.Lucene99HnswVectorsReader.readVectorEncoding;
-
 @Log4j2
 public class JVectorReader extends KnnVectorsReader {
     private static final VectorTypeSupport VECTOR_TYPE_SUPPORT = VectorizationProvider.getInstance().getVectorTypeSupport();
@@ -47,9 +47,11 @@ public class JVectorReader extends KnnVectorsReader {
     private final Map<String, FieldEntry> fieldEntryMap = new HashMap<>(1);
     private final Directory directory;
     private final SegmentReadState state;
+    private final boolean quantized;
 
-    public JVectorReader(SegmentReadState state) throws IOException {
+    public JVectorReader(SegmentReadState state, boolean quantized) throws IOException {
         this.state = state;
+        this.quantized = quantized;
         this.fieldInfos = state.fieldInfos;
         this.baseDataFileName = state.segmentInfo.name + "_" + state.segmentSuffix;
         String metaFileName = IndexFileNames.segmentFileName(state.segmentInfo.name, state.segmentSuffix, JVectorFormat.META_EXTENSION);
@@ -109,9 +111,20 @@ public class JVectorReader extends KnnVectorsReader {
 
         // search for a random vector using a GraphSearcher and SearchScoreProvider
         VectorFloat<?> q = VECTOR_TYPE_SUPPORT.createFloatVector(target);
-        try (GraphSearcher searcher = new GraphSearcher(index)) {
-            SearchScoreProvider ssp = SearchScoreProvider.exact(q, fieldEntryMap.get(field).similarityFunction, index.getView());
+        final SearchScoreProvider ssp;
 
+        if (quantized) {
+            final PQVectors pqVectors = fieldEntryMap.get(field).pqVectors;
+            // SearchScoreProvider that does a first pass with the loaded-in-memory PQVectors,
+            // then reranks with the exact vectors that are stored on disk in the index
+            ScoreFunction.ApproximateScoreFunction asf = pqVectors.precomputedScoreFunctionFor(q, VectorSimilarityFunction.EUCLIDEAN);
+            ScoreFunction.ExactScoreFunction reranker = index.getView().rerankerFor(q, VectorSimilarityFunction.EUCLIDEAN);
+            ssp = new SearchScoreProvider(asf, reranker);
+
+        } else { // Not quantized, used typical searcher
+            ssp = SearchScoreProvider.exact(q, fieldEntryMap.get(field).similarityFunction, index.getView());
+        }
+        try (GraphSearcher searcher = new GraphSearcher(index)) {
             // Adapt acceptDocs to io.github.jbellis.jvector.util.Bits
             io.github.jbellis.jvector.util.Bits compatibleBits = doc -> acceptDocs == null || acceptDocs.get(doc);
 
@@ -136,15 +149,12 @@ public class JVectorReader extends KnnVectorsReader {
 
     private void readFields(ChecksumIndexInput meta) throws IOException {
         for (int fieldNumber = meta.readInt(); fieldNumber != -1; fieldNumber = meta.readInt()) {
-            final FieldInfo fieldInfo = fieldInfos.fieldInfo(fieldNumber); // read field number)
-            final VectorEncoding vectorEncoding = readVectorEncoding(meta);
-            final VectorSimilarityFunction similarityFunction = VectorSimilarityMapper.ordToDistFunc(meta.readInt());
-            final long vectorIndexOffset = meta.readVLong();
-            final long vectorIndexLength = meta.readVLong();
-            final int dimension = meta.readVInt();
+            final FieldInfo fieldInfo = fieldInfos.fieldInfo(fieldNumber); // read field number
+            JVectorWriter.VectorIndexFieldMetadata vectorIndexFieldMetadata = new JVectorWriter.VectorIndexFieldMetadata(meta);
+            assert fieldInfo.number == vectorIndexFieldMetadata.getFieldNumber();
             fieldEntryMap.put(
-                fieldInfo.name,
-                new FieldEntry(fieldInfo, similarityFunction, vectorEncoding, vectorIndexOffset, vectorIndexLength, dimension)
+                    fieldInfo.name,
+                    new FieldEntry(fieldInfo, vectorIndexFieldMetadata)
             );
         }
     }
@@ -153,26 +163,26 @@ public class JVectorReader extends KnnVectorsReader {
         private final FieldInfo fieldInfo;
         private final VectorEncoding vectorEncoding;
         private final VectorSimilarityFunction similarityFunction;
+        private final int dimension;
         private final long vectorIndexOffset;
         private final long vectorIndexLength;
-        private final int dimension;
+        private final long pqCodebooksAndVectorsLength;
+        private final long pqCodebooksAndVectorsOffset;
         private final ReaderSupplier readerSupplier;
         private final OnDiskGraphIndex index;
+        private final PQVectors pqVectors; // The product quantized vectors with their codebooks
 
         public FieldEntry(
             FieldInfo fieldInfo,
-            VectorSimilarityFunction similarityFunction,
-            VectorEncoding vectorEncoding,
-            long vectorIndexOffset,
-            long vectorIndexLength,
-            int dimension
-        ) throws IOException {
+            JVectorWriter.VectorIndexFieldMetadata vectorIndexFieldMetadata) throws IOException {
             this.fieldInfo = fieldInfo;
-            this.similarityFunction = similarityFunction;
-            this.vectorEncoding = vectorEncoding;
-            this.vectorIndexOffset = vectorIndexOffset;
-            this.vectorIndexLength = vectorIndexLength;
-            this.dimension = dimension;
+            this.similarityFunction = VectorSimilarityMapper.ordToDistFunc(vectorIndexFieldMetadata.getVectorSimilarityFunction().ordinal());
+            this.vectorEncoding = vectorIndexFieldMetadata.getVectorEncoding();
+            this.vectorIndexOffset = vectorIndexFieldMetadata.getVectorIndexOffset();
+            this.vectorIndexLength = vectorIndexFieldMetadata.getVectorIndexLength();
+            this.pqCodebooksAndVectorsLength = vectorIndexFieldMetadata.getPqCodebooksAndVectorsLength();
+            this.pqCodebooksAndVectorsOffset = vectorIndexFieldMetadata.getPqCodebooksAndVectorsOffset();
+            this.dimension = vectorIndexFieldMetadata.getVectorDimension();
             // TODO: do not depend on the actual nio.Path switch to file name only!
             final Path expectedIndexFilePath = JVectorFormat.getVectorIndexPath(directoryBasePath, baseDataFileName, fieldInfo.name);
             final String originalIndexFileName = expectedIndexFilePath.getFileName().toString();
@@ -221,6 +231,18 @@ public class JVectorReader extends KnnVectorsReader {
             this.readerSupplier = ReaderSupplierFactory.open(indexFilePath);
             this.index = OnDiskGraphIndex.load(readerSupplier, sliceOffset + vectorIndexOffset);
 
+            // If quantized load the compressed product quantized vectors with their codebooks
+            if (quantized) {
+                assert pqCodebooksAndVectorsLength > 0;
+                assert pqCodebooksAndVectorsOffset > 0;
+                try (final var randomAccessReader = readerSupplier.get()) {
+                    randomAccessReader.seek(pqCodebooksAndVectorsOffset);
+                    this.pqVectors = PQVectors.load(randomAccessReader);
+                }
+            } else {
+                this.pqVectors = null;
+            }
+
             // Check the footer
             try (ChecksumIndexInput indexInput = directory.openChecksumInput(originalIndexFileName)) {
                 indexInput.seek(vectorIndexOffset + vectorIndexLength);
@@ -263,6 +285,19 @@ public class JVectorReader extends KnnVectorsReader {
 
         public static VectorSimilarityFunction ordToDistFunc(int ord) {
             return JVECTOR_SUPPORTED_SIMILARITY_FUNCTIONS.get(ord);
+        }
+
+        public static org.apache.lucene.index.VectorSimilarityFunction ordToLuceneDistFunc(int ord) {
+            if (ord < 0 || ord >= JVECTOR_SUPPORTED_SIMILARITY_FUNCTIONS.size()) {
+                throw new IllegalArgumentException("Invalid ordinal: " + ord);
+            }
+            VectorSimilarityFunction jvectorFunc = JVECTOR_SUPPORTED_SIMILARITY_FUNCTIONS.get(ord);
+            for (Map.Entry<org.apache.lucene.index.VectorSimilarityFunction, VectorSimilarityFunction> entry : luceneToJVectorMap.entrySet()) {
+                if (entry.getValue().equals(jvectorFunc)) {
+                    return entry.getKey();
+                }
+            }
+            throw new IllegalStateException("No matching Lucene VectorSimilarityFunction found for ordinal: " + ord);
         }
     }
 

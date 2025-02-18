@@ -17,8 +17,6 @@ import org.apache.lucene.index.*;
 
 import java.io.IOException;
 
-import java.util.List;
-
 @Log4j2
 public class KNN80DocValuesProducer extends DocValuesProducer {
     private final DocValuesProducer delegate;
@@ -72,9 +70,5 @@ public class KNN80DocValuesProducer extends DocValuesProducer {
     @Override
     public void close() throws IOException {
         delegate.close();
-    }
-
-    private static List<String> getVectorCacheKeysFromSegmentReaderState(SegmentReadState segmentReadState) {
-        throw new UnsupportedOperationException("Unsupported operation");
     }
 }

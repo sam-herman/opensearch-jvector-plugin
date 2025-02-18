@@ -5,16 +5,21 @@
 
 package org.opensearch.knn.index.codec.jvector;
 
+import io.github.jbellis.jvector.disk.RandomAccessWriter;
 import io.github.jbellis.jvector.graph.GraphIndexBuilder;
 import io.github.jbellis.jvector.graph.ListRandomAccessVectorValues;
 import io.github.jbellis.jvector.graph.OnHeapGraphIndex;
 import io.github.jbellis.jvector.graph.RandomAccessVectorValues;
 import io.github.jbellis.jvector.graph.disk.*;
 import io.github.jbellis.jvector.graph.similarity.BuildScoreProvider;
+import io.github.jbellis.jvector.quantization.ProductQuantization;
 import io.github.jbellis.jvector.vector.VectorizationProvider;
 import io.github.jbellis.jvector.vector.types.VectorFloat;
 import io.github.jbellis.jvector.vector.types.VectorTypeSupport;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.Value;
 import lombok.extern.log4j.Log4j2;
 import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.codecs.KnnFieldVectorsWriter;
@@ -24,11 +29,13 @@ import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.store.*;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.RamUsageEstimator;
-import org.opensearch.common.collect.Tuple;
 
+import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
+
+import static org.apache.lucene.codecs.lucene99.Lucene99HnswVectorsReader.readVectorEncoding;
 
 @Log4j2
 public class JVectorWriter extends KnnVectorsWriter {
@@ -45,15 +52,18 @@ public class JVectorWriter extends KnnVectorsWriter {
     private final int beamWidth;
     private final float degreeOverflow;
     private final float alpha;
+    private final boolean quantized;
+
     private boolean finished = false;
 
-    public JVectorWriter(SegmentWriteState segmentWriteState, int maxConn, int beamWidth, float degreeOverflow, float alpha)
+    public JVectorWriter(SegmentWriteState segmentWriteState, int maxConn, int beamWidth, float degreeOverflow, float alpha, boolean quantized)
         throws IOException {
         this.segmentWriteState = segmentWriteState;
         this.maxConn = maxConn;
         this.beamWidth = beamWidth;
         this.degreeOverflow = degreeOverflow;
         this.alpha = alpha;
+        this.quantized = quantized;
         String metaFileName = IndexFileNames.segmentFileName(
             segmentWriteState.segmentInfo.name,
             segmentWriteState.segmentSuffix,
@@ -173,25 +183,10 @@ public class JVectorWriter extends KnnVectorsWriter {
     }
 
     private void writeField(FieldWriter<?> fieldData) throws IOException {
-        // write graph
-        // long vectorIndexOffset = vectorIndex.getFilePointer();
         OnHeapGraphIndex graph = fieldData.getGraph();
-        Tuple<Long, Long> vectorIndexOffsetAndLength = writeGraph(graph, fieldData);
-
-        writeMeta(
-            fieldData.fieldInfo,
-            vectorIndexOffsetAndLength.v1(), // vectorIndexOffset
-            vectorIndexOffsetAndLength.v2() // vectorIndexLength);
-        );
-    }
-
-    private void writeMeta(FieldInfo field, long vectorIndexOffset, long vectorIndexLength) throws IOException {
-        meta.writeInt(field.number);
-        meta.writeInt(field.getVectorEncoding().ordinal());
-        meta.writeInt(JVectorReader.VectorSimilarityMapper.distFuncToOrd(field.getVectorSimilarityFunction()));
-        meta.writeVLong(vectorIndexOffset);
-        meta.writeVLong(vectorIndexLength);
-        meta.writeVInt(field.getVectorDimension());
+        final var vectorIndexFieldMetadata = writeGraph(graph, fieldData);
+        meta.writeInt(fieldData.fieldInfo.number);
+        vectorIndexFieldMetadata.toOutput(meta);
     }
 
     /**
@@ -201,10 +196,10 @@ public class JVectorWriter extends KnnVectorsWriter {
      * @return Tuple of start offset and length of the graph
      * @throws IOException IOException
      */
-    private Tuple<Long, Long> writeGraph(OnHeapGraphIndex graph, FieldWriter<?> fieldData) throws IOException {
+    private VectorIndexFieldMetadata writeGraph(OnHeapGraphIndex graph, FieldWriter<?> fieldData) throws IOException {
         // TODO: use the vector index inputStream instead of this!
         final Path jvecFilePath = JVectorFormat.getVectorIndexPath(directoryBasePath, baseDataFileName, fieldData.fieldInfo.name);
-        /** This is an ugly hack to make sure Lucene actually knows about our input stream files, otherwise it will delete them */
+        /* This is an ugly hack to make sure Lucene actually knows about our input stream files, otherwise it will delete them */
         IndexOutput indexOutput = segmentWriteState.directory.createOutput(
             jvecFilePath.getFileName().toString(),
             segmentWriteState.context
@@ -218,29 +213,102 @@ public class JVectorWriter extends KnnVectorsWriter {
         );
         final long startOffset = indexOutput.getFilePointer();
         indexOutput.close();
-        /** End of ugly hack */
+        /* End of ugly hack */
 
         log.info("Writing graph to {}", jvecFilePath);
-        final Tuple<Long, Long> result;
-        try (
-            var writer = new OnDiskGraphIndexWriter.Builder(graph, jvecFilePath).with(
+        var resultBuilder = VectorIndexFieldMetadata.builder()
+                .fieldNumber(fieldData.fieldInfo.number)
+                .vectorEncoding(fieldData.fieldInfo.getVectorEncoding())
+                .vectorSimilarityFunction(fieldData.fieldInfo.getVectorSimilarityFunction());
+
+        try (var writer = new OnDiskGraphIndexWriter.Builder(graph, jvecFilePath).with(
                 new InlineVectors(fieldData.randomAccessVectorValues.dimension())
-            ).withStartOffset(startOffset).build()
-        ) {
+            ).withStartOffset(startOffset).build()) {
             var suppliers = Feature.singleStateFactory(
                 FeatureId.INLINE_VECTORS,
                 nodeId -> new InlineVectors.State(fieldData.randomAccessVectorValues.getVector(nodeId))
             );
             writer.write(suppliers);
-            long endOffset = writer.getOutput().position();
-            result = new Tuple<>(startOffset, endOffset - startOffset);
+            final RandomAccessWriter randomAccessWriter = writer.getOutput();
+            long endGraphOffset = randomAccessWriter.position();
+            resultBuilder.vectorIndexOffset(startOffset);
+            resultBuilder.vectorIndexLength(endGraphOffset - startOffset);
+
+            // If PQ is enabled write the PQ codebooks with the encoded vectors
+            if (quantized) {
+                resultBuilder.pqCodebooksAndVectorsOffset(endGraphOffset);
+                writePQCodebooksAndVectors(randomAccessWriter, fieldData);
+                resultBuilder.pqCodebooksAndVectorsLength(randomAccessWriter.position() - endGraphOffset);
+            } else {
+                resultBuilder.pqCodebooksAndVectorsOffset(0);
+                resultBuilder.pqCodebooksAndVectorsLength(0);
+            }
             // write footer by wrapping jVector RandomAccessOutput to IndexOutput object
             // This mostly helps to interface with the existing Lucene CodecUtil
             IndexOutput jvecIndexOutput = new JVectorIndexOutput(writer.getOutput());
             CodecUtil.writeFooter(jvecIndexOutput);
         }
 
-        return result;
+        return resultBuilder.build();
+    }
+
+    /**
+     * Writes the product quantization (PQ) codebooks and encoded vectors to a DataOutput stream.
+     * This method compresses the original vector data using product quantization and encodes
+     * all vector values into a smaller, compressed form for storage or transfer.
+     *
+     * @param out The DataOutput stream where the compressed PQ codebooks and encoded vectors will be written.
+     * @param fieldData The field writer object providing access to the vector data to be compressed.
+     * @throws IOException If an I/O error occurs during writing.
+     */
+    private static void writePQCodebooksAndVectors(DataOutput out, FieldWriter<?> fieldData) throws IOException {
+
+        // TODO: should we make this configurable?
+        // Compress the original vectors using PQ. this represents a compression ratio of 128 * 4 / 16 = 32x
+        ProductQuantization pq = ProductQuantization.compute(fieldData.randomAccessVectorValues,
+                16, // number of subspaces
+                256, // number of centroids per subspace
+                true); // center the dataset
+        var pqv = pq.encodeAll(fieldData.randomAccessVectorValues);
+        // write the compressed vectors to disk
+        pqv.write(out);
+    }
+
+    @Value
+    @Builder(toBuilder = true)
+    @AllArgsConstructor
+    public static class VectorIndexFieldMetadata {
+        int fieldNumber;
+        VectorEncoding vectorEncoding;
+        VectorSimilarityFunction vectorSimilarityFunction;
+        int vectorDimension;
+        long vectorIndexOffset;
+        long vectorIndexLength;
+        long pqCodebooksAndVectorsOffset;
+        long pqCodebooksAndVectorsLength;
+
+        public void toOutput(IndexOutput out) throws IOException {
+            out.writeInt(fieldNumber);
+            out.writeInt(vectorEncoding.ordinal());
+            out.writeInt(JVectorReader.VectorSimilarityMapper.distFuncToOrd(vectorSimilarityFunction));
+            out.writeVInt(vectorDimension);
+            out.writeVLong(vectorIndexOffset);
+            out.writeVLong(vectorIndexLength);
+            out.writeVLong(pqCodebooksAndVectorsOffset);
+            out.writeVLong(pqCodebooksAndVectorsLength);
+        }
+
+        public VectorIndexFieldMetadata(IndexInput in) throws IOException {
+            this.fieldNumber = in.readInt();
+            this.vectorEncoding = readVectorEncoding(in);
+            this.vectorSimilarityFunction = JVectorReader.VectorSimilarityMapper.ordToLuceneDistFunc(in.readInt());
+            this.vectorDimension = in.readVInt();
+            this.vectorIndexOffset = in.readVLong();
+            this.vectorIndexLength = in.readVLong();
+            this.pqCodebooksAndVectorsOffset = in.readVLong();
+            this.pqCodebooksAndVectorsLength = in.readVLong();
+        }
+
     }
 
     @Override
@@ -277,6 +345,14 @@ public class JVectorWriter extends KnnVectorsWriter {
         return total;
     }
 
+    /**
+     * The FieldWriter class is responsible for writing vector field data into index segments.
+     * It provides functionality to process vector values as those being added, manage memory usage, and build HNSW graph
+     * indexing structures for efficient retrieval during search queries.
+     *
+     * @param <T> The type of vector value to be handled by the writer.
+     * This is often specialized to support specific implementations, such as float[] or byte[] vectors.
+     */
     class FieldWriter<T> extends KnnFieldVectorsWriter<T> {
         private final VectorTypeSupport VECTOR_TYPE_SUPPORT = VectorizationProvider.getInstance().getVectorTypeSupport();
         private final long SHALLOW_SIZE = RamUsageEstimator.shallowSizeOfInstance(FieldWriter.class);
