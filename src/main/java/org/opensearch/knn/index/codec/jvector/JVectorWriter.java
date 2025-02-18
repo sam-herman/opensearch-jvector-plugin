@@ -56,8 +56,14 @@ public class JVectorWriter extends KnnVectorsWriter {
 
     private boolean finished = false;
 
-    public JVectorWriter(SegmentWriteState segmentWriteState, int maxConn, int beamWidth, float degreeOverflow, float alpha, boolean quantized)
-        throws IOException {
+    public JVectorWriter(
+        SegmentWriteState segmentWriteState,
+        int maxConn,
+        int beamWidth,
+        float degreeOverflow,
+        float alpha,
+        boolean quantized
+    ) throws IOException {
         this.segmentWriteState = segmentWriteState;
         this.maxConn = maxConn;
         this.beamWidth = beamWidth;
@@ -217,13 +223,15 @@ public class JVectorWriter extends KnnVectorsWriter {
 
         log.info("Writing graph to {}", jvecFilePath);
         var resultBuilder = VectorIndexFieldMetadata.builder()
-                .fieldNumber(fieldData.fieldInfo.number)
-                .vectorEncoding(fieldData.fieldInfo.getVectorEncoding())
-                .vectorSimilarityFunction(fieldData.fieldInfo.getVectorSimilarityFunction());
+            .fieldNumber(fieldData.fieldInfo.number)
+            .vectorEncoding(fieldData.fieldInfo.getVectorEncoding())
+            .vectorSimilarityFunction(fieldData.fieldInfo.getVectorSimilarityFunction());
 
-        try (var writer = new OnDiskGraphIndexWriter.Builder(graph, jvecFilePath).with(
+        try (
+            var writer = new OnDiskGraphIndexWriter.Builder(graph, jvecFilePath).with(
                 new InlineVectors(fieldData.randomAccessVectorValues.dimension())
-            ).withStartOffset(startOffset).build()) {
+            ).withStartOffset(startOffset).build()
+        ) {
             var suppliers = Feature.singleStateFactory(
                 FeatureId.INLINE_VECTORS,
                 nodeId -> new InlineVectors.State(fieldData.randomAccessVectorValues.getVector(nodeId))
@@ -265,10 +273,15 @@ public class JVectorWriter extends KnnVectorsWriter {
 
         // TODO: should we make this configurable?
         // Compress the original vectors using PQ. this represents a compression ratio of 128 * 4 / 16 = 32x
-        ProductQuantization pq = ProductQuantization.compute(fieldData.randomAccessVectorValues,
-                16, // number of subspaces
-                256, // number of centroids per subspace
-                true); // center the dataset
+        final var M = Math.min(fieldData.randomAccessVectorValues.dimension(), 16); // number of subspaces
+        final var numberOfClustersPerSubspace = Math.min(256, fieldData.randomAccessVectorValues.size()); // number of centroids per
+                                                                                                          // subspace
+        ProductQuantization pq = ProductQuantization.compute(
+            fieldData.randomAccessVectorValues,
+            M, // number of subspaces
+            numberOfClustersPerSubspace, // number of centroids per subspace
+            true
+        ); // center the dataset
         var pqv = pq.encodeAll(fieldData.randomAccessVectorValues);
         // write the compressed vectors to disk
         pqv.write(out);
@@ -442,6 +455,7 @@ public class JVectorWriter extends KnnVectorsWriter {
          * @throws IOException IOException
          */
         public OnHeapGraphIndex getGraph() throws IOException {
+            graphIndexBuilder.cleanup();
             return graphIndexBuilder.getGraph();
         }
     }

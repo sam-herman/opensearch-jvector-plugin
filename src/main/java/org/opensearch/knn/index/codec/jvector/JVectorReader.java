@@ -117,10 +117,12 @@ public class JVectorReader extends KnnVectorsReader {
             final PQVectors pqVectors = fieldEntryMap.get(field).pqVectors;
             // SearchScoreProvider that does a first pass with the loaded-in-memory PQVectors,
             // then reranks with the exact vectors that are stored on disk in the index
-            ScoreFunction.ApproximateScoreFunction asf = pqVectors.precomputedScoreFunctionFor(q, VectorSimilarityFunction.EUCLIDEAN);
-            ScoreFunction.ExactScoreFunction reranker = index.getView().rerankerFor(q, VectorSimilarityFunction.EUCLIDEAN);
+            ScoreFunction.ApproximateScoreFunction asf = pqVectors.precomputedScoreFunctionFor(
+                q,
+                fieldEntryMap.get(field).similarityFunction
+            );
+            ScoreFunction.ExactScoreFunction reranker = index.getView().rerankerFor(q, fieldEntryMap.get(field).similarityFunction);
             ssp = new SearchScoreProvider(asf, reranker);
-
         } else { // Not quantized, used typical searcher
             ssp = SearchScoreProvider.exact(q, fieldEntryMap.get(field).similarityFunction, index.getView());
         }
@@ -152,10 +154,7 @@ public class JVectorReader extends KnnVectorsReader {
             final FieldInfo fieldInfo = fieldInfos.fieldInfo(fieldNumber); // read field number
             JVectorWriter.VectorIndexFieldMetadata vectorIndexFieldMetadata = new JVectorWriter.VectorIndexFieldMetadata(meta);
             assert fieldInfo.number == vectorIndexFieldMetadata.getFieldNumber();
-            fieldEntryMap.put(
-                    fieldInfo.name,
-                    new FieldEntry(fieldInfo, vectorIndexFieldMetadata)
-            );
+            fieldEntryMap.put(fieldInfo.name, new FieldEntry(fieldInfo, vectorIndexFieldMetadata));
         }
     }
 
@@ -172,11 +171,11 @@ public class JVectorReader extends KnnVectorsReader {
         private final OnDiskGraphIndex index;
         private final PQVectors pqVectors; // The product quantized vectors with their codebooks
 
-        public FieldEntry(
-            FieldInfo fieldInfo,
-            JVectorWriter.VectorIndexFieldMetadata vectorIndexFieldMetadata) throws IOException {
+        public FieldEntry(FieldInfo fieldInfo, JVectorWriter.VectorIndexFieldMetadata vectorIndexFieldMetadata) throws IOException {
             this.fieldInfo = fieldInfo;
-            this.similarityFunction = VectorSimilarityMapper.ordToDistFunc(vectorIndexFieldMetadata.getVectorSimilarityFunction().ordinal());
+            this.similarityFunction = VectorSimilarityMapper.ordToDistFunc(
+                vectorIndexFieldMetadata.getVectorSimilarityFunction().ordinal()
+            );
             this.vectorEncoding = vectorIndexFieldMetadata.getVectorEncoding();
             this.vectorIndexOffset = vectorIndexFieldMetadata.getVectorIndexOffset();
             this.vectorIndexLength = vectorIndexFieldMetadata.getVectorIndexLength();
@@ -235,6 +234,9 @@ public class JVectorReader extends KnnVectorsReader {
             if (quantized) {
                 assert pqCodebooksAndVectorsLength > 0;
                 assert pqCodebooksAndVectorsOffset > 0;
+                if (pqCodebooksAndVectorsOffset < vectorIndexOffset) {
+                    throw new IllegalArgumentException("pqCodebooksAndVectorsOffset must be greater than vectorIndexOffset");
+                }
                 try (final var randomAccessReader = readerSupplier.get()) {
                     randomAccessReader.seek(pqCodebooksAndVectorsOffset);
                     this.pqVectors = PQVectors.load(randomAccessReader);
@@ -245,8 +247,17 @@ public class JVectorReader extends KnnVectorsReader {
 
             // Check the footer
             try (ChecksumIndexInput indexInput = directory.openChecksumInput(originalIndexFileName)) {
-                indexInput.seek(vectorIndexOffset + vectorIndexLength);
-                CodecUtil.checkFooter(indexInput);
+                // If there are pq codebooks and vectors, then the footer is at the end of the pq codebooks and vectors
+                if (pqCodebooksAndVectorsOffset > 0) {
+                    indexInput.seek(pqCodebooksAndVectorsOffset + pqCodebooksAndVectorsLength);
+                    CodecUtil.checkFooter(indexInput);
+                } else {
+                    // If there are no pq codebooks and vectors, then the footer is at the end of the vector index
+                    // file
+                    indexInput.seek(vectorIndexOffset + vectorIndexLength);
+                    CodecUtil.checkFooter(indexInput);
+                }
+
             }
 
         }
@@ -292,7 +303,8 @@ public class JVectorReader extends KnnVectorsReader {
                 throw new IllegalArgumentException("Invalid ordinal: " + ord);
             }
             VectorSimilarityFunction jvectorFunc = JVECTOR_SUPPORTED_SIMILARITY_FUNCTIONS.get(ord);
-            for (Map.Entry<org.apache.lucene.index.VectorSimilarityFunction, VectorSimilarityFunction> entry : luceneToJVectorMap.entrySet()) {
+            for (Map.Entry<org.apache.lucene.index.VectorSimilarityFunction, VectorSimilarityFunction> entry : luceneToJVectorMap
+                .entrySet()) {
                 if (entry.getValue().equals(jvectorFunc)) {
                     return entry.getKey();
                 }
