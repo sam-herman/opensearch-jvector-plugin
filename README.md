@@ -16,6 +16,22 @@
 
 **OpenSearch jVector Plugin** enables you to run the nearest neighbor search on billions of documents across thousands of dimensions with the same ease as running any regular OpenSearch query. You can use aggregations and filter clauses to further refine your similarity search operations. k-NN similarity search powers use cases such as product recommendations, fraud detection, image and video search, related document search, and more.
 
+### Why use OpenSearch jVector Plugin?
+
+#### High Level
+- **Scalable**: Run similarity search on billions of documents across thousands of dimensions without exceeding memory by using DiskANN
+- **Fast**: Blazing fast pure Java implementation with minimal overhead (see [benchmarks](https://github.com/jbellis/jvector/blob/main/README.md))
+- **Lightweight**: Pure Java implementation. Self-contained, builds in seconds, no need to deal with native dependencies and complex flaky builds.
+
+#### Unique Features
+- **DiskANN**: JVector is capable to perform search without loading the entire index into RAM. This is a functionality that is not available today through Lucene and can be done through jVector without involving native dependencies (FAISS) and cumbersome JNI mechanism.
+- _**Thread Safety**_ - JVector is a threadsafe index that supports concurrent modification and inserts with near perfect scalability as you add cores, Lucene is not threadsafe; OpenSearch kind of works around this with multiple segments but then has to compact them so insert performance still suffers (and I believe you can't read from a lucene segment during construction)
+- _**quantized index construction**_ - JVector can perform index construction w/ quantized vectors, saving memory = larger segments = fewer segments = faster searches
+- _**Quantized Disk ANN**_ - JVector supports DiskANN style quantization with rerank, it's quite easy (in principle) to demonstrate that this is a massive difference in performance for larger-than-memory indexes (in practice it takes days/weeks to insert enough vectors into Lucene to show this b/c of the single threaded problem, that's the only hard part)
+- _**PQ and BQ support**_  - As part of (3) JVector supports PQ as well as the BQ that Lucene offers, it seems that this is fairly rare (pgvector doesn't do PQ either) because (1) the code required to get high performance ADC with SIMD is a bit involved and (2) it requires a separate codebook which Lucene isn't set up to easily accommodate.  PQ at 64x compression gives you higher relevance than BQ at 32x
+- _**Fused ADC**_ - Features that nobody else has like Fused ADC and NVQ and Anisotropic PQ
+- _**Compatibility**_ - JVector is compatible with Cassandra. Which allows to more easily transfer vector encoded data from Cassandra to OpenSearch and vice versa.
+
 ## Project Resources
 
 * [Project Website](https://opensearch.org/)
