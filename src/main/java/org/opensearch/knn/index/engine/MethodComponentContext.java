@@ -25,7 +25,6 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
-import org.opensearch.knn.indices.ModelMetadata;
 
 import static org.opensearch.knn.common.KNNConstants.NAME;
 import static org.opensearch.knn.common.KNNConstants.PARAMETERS;
@@ -226,42 +225,6 @@ public class MethodComponentContext implements ToXContentFragment, Writeable {
     }
 
     /**
-     *
-     * Provides a String representation of MethodComponentContext
-     * Sample return:
-     * {name=ivf;parameters=[nlist=4;type=fp16;encoder={name=sq;parameters=[nprobes=2;clip=false;]};]}
-     *
-     * @return string representation
-     */
-    public String toClusterStateString() {
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("{name=").append(name).append(DELIMITER);
-        stringBuilder.append("parameters=[");
-        if (Objects.nonNull(parameters)) {
-            for (Map.Entry<String, Object> entry : parameters.entrySet()) {
-                stringBuilder.append(entry.getKey()).append("=");
-                Object objectValue = entry.getValue();
-                String value;
-                if (objectValue instanceof MethodComponentContext) {
-                    value = ((MethodComponentContext) objectValue).toClusterStateString();
-                } else {
-                    value = entry.getValue().toString();
-                }
-                // Model Metadata uses a delimiter to split the input string in its fromString method
-                // https://github.com/opensearch-project/k-NN/blob/2.12/src/main/java/org/opensearch/knn/indices/ModelMetadata.java#L265
-                // If any of the values in the method component context contain this delimiter,
-                // then the method will not work correctly. Therefore, we replace the delimiter with an uncommon
-                // sequence that is very unlikely to appear in the value itself.
-                // https://github.com/opensearch-project/k-NN/issues/1337
-                value = value.replace(ModelMetadata.DELIMITER, DELIMITER_PLACEHOLDER);
-                stringBuilder.append(value).append(DELIMITER);
-            }
-        }
-        stringBuilder.append("]}");
-        return stringBuilder.toString();
-    }
-
-    /**
      * This method converts a string created by the toClusterStateString() method of MethodComponentContext
      * to a MethodComponentContext object.
      *
@@ -339,8 +302,7 @@ public class MethodComponentContext implements ToXContentFragment, Writeable {
         } else if (stringValue.equals("true") || stringValue.equals("false")) {
             value = Boolean.parseBoolean(stringValue);
         } else {
-            stringValue = stringValue.replace(DELIMITER_PLACEHOLDER, ModelMetadata.DELIMITER);
-            value = stringValue;
+            throw new IllegalArgumentException("Invalid value in MethodComponentContext");
         }
 
         return new ValueAndRestToParse(value, stringValueAndRestToParse[1]);

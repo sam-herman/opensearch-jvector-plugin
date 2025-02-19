@@ -14,10 +14,6 @@ import org.apache.lucene.index.VectorSimilarityFunction;
 import org.apache.lucene.util.BytesRef;
 import org.opensearch.knn.index.codec.util.KNNVectorSerializer;
 import org.opensearch.knn.index.codec.util.KNNVectorSerializerFactory;
-import org.opensearch.knn.training.BinaryTrainingDataConsumer;
-import org.opensearch.knn.training.ByteTrainingDataConsumer;
-import org.opensearch.knn.training.FloatTrainingDataConsumer;
-import org.opensearch.knn.training.TrainingDataConsumer;
 
 import java.util.Arrays;
 import java.util.Locale;
@@ -29,8 +25,7 @@ import static org.opensearch.knn.common.KNNConstants.VECTOR_DATA_TYPE_FIELD;
 /**
  * Enum contains data_type of vectors
  * Lucene supports binary, byte and float data type
- * NMSLib supports only float data type
- * Faiss supports binary and float data type
+ * jVector supports float data type
  */
 @AllArgsConstructor
 public enum VectorDataType {
@@ -54,16 +49,6 @@ public enum VectorDataType {
             }
             return vector;
         }
-
-        @Override
-        public TrainingDataConsumer getTrainingDataConsumer() {
-            return new BinaryTrainingDataConsumer();
-        }
-
-        @Override
-        public void freeNativeMemory(long memoryAddress) {
-            throw new UnsupportedOperationException("Unsupported operation with native memory");
-        }
     },
     BYTE("byte") {
 
@@ -83,16 +68,6 @@ public enum VectorDataType {
             }
             return vector;
         }
-
-        @Override
-        public TrainingDataConsumer getTrainingDataConsumer() {
-            return new ByteTrainingDataConsumer();
-        }
-
-        @Override
-        public void freeNativeMemory(long memoryAddress) {
-            throw new UnsupportedOperationException("Unsupported operation with native memory");
-        }
     },
     FLOAT("float") {
 
@@ -106,17 +81,6 @@ public enum VectorDataType {
             final KNNVectorSerializer vectorSerializer = KNNVectorSerializerFactory.getSerializerByBytesRef(binaryValue);
             return vectorSerializer.byteToFloatArray(binaryValue);
         }
-
-        @Override
-        public TrainingDataConsumer getTrainingDataConsumer() {
-            return new FloatTrainingDataConsumer();
-        }
-
-        @Override
-        public void freeNativeMemory(long memoryAddress) {
-            throw new UnsupportedOperationException("Unsupported operation with native memory");
-        }
-
     };
 
     public static final String SUPPORTED_VECTOR_DATA_TYPES = Arrays.stream(VectorDataType.values())
@@ -142,16 +106,6 @@ public enum VectorDataType {
      * @return float vector deserialized from binary value
      */
     public abstract float[] getVectorFromBytesRef(BytesRef binaryValue);
-
-    /**
-     * @return TrainingDataConsumer which consumes training data
-     */
-    public abstract TrainingDataConsumer getTrainingDataConsumer();
-
-    /**
-     * @param memoryAddress address to be freed
-     */
-    public abstract void freeNativeMemory(long memoryAddress);
 
     /**
      * Validates if given VectorDataType is in the list of supported data types.

@@ -43,7 +43,6 @@ public final class OriginalMappingParameters {
     private KNNMethodContext resolvedKnnMethodContext;
     private final String mode;
     private final String compressionLevel;
-    private final String modelId;
     private final String topLevelSpaceType;
 
     /**
@@ -58,7 +57,6 @@ public final class OriginalMappingParameters {
         this.dimension = builder.dimension.get();
         this.mode = builder.mode.get();
         this.compressionLevel = builder.compressionLevel.get();
-        this.modelId = builder.modelId.get();
         this.topLevelSpaceType = builder.topLevelSpaceType.get();
     }
 
@@ -71,10 +69,6 @@ public final class OriginalMappingParameters {
      */
     public boolean isLegacyMapping() {
         if (knnMethodContext != null) {
-            return false;
-        }
-
-        if (modelId != null) {
             return false;
         }
 

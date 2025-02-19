@@ -79,9 +79,6 @@ public abstract class BasePerFieldKnnVectorsFormat extends PerFieldKnnVectorsFor
         ).fieldType(field);
 
         final KNNMappingConfig knnMappingConfig = mappedFieldType.getKnnMappingConfig();
-        if (knnMappingConfig.getModelId().isPresent()) {
-            throw new UnsupportedOperationException("Unsupported operation");
-        }
 
         final KNNMethodContext knnMethodContext = knnMappingConfig.getKnnMethodContext()
             .orElseThrow(() -> new IllegalArgumentException("KNN method context cannot be empty"));

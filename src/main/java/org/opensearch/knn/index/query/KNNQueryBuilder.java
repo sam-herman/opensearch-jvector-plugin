@@ -38,9 +38,6 @@ import org.opensearch.knn.index.VectorQueryType;
 import org.opensearch.knn.index.query.parser.KNNQueryBuilderParser;
 import org.opensearch.knn.index.engine.KNNLibrarySearchContext;
 import org.opensearch.knn.index.engine.KNNEngine;
-import org.opensearch.knn.indices.ModelDao;
-import org.opensearch.knn.indices.ModelMetadata;
-import org.opensearch.knn.indices.ModelUtil;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -69,8 +66,6 @@ import static org.opensearch.knn.index.query.parser.RescoreParser.RESCORE_PARAME
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Log4j2
 public class KNNQueryBuilder extends AbstractQueryBuilder<KNNQueryBuilder> implements WithFieldName {
-    private static ModelDao modelDao;
-
     public static final ParseField VECTOR_FIELD = new ParseField("vector");
     public static final ParseField K_FIELD = new ParseField("k");
     public static final ParseField FILTER_FIELD = new ParseField("filter");
@@ -333,10 +328,6 @@ public class KNNQueryBuilder extends AbstractQueryBuilder<KNNQueryBuilder> imple
         this.expandNested = null;
     }
 
-    public static void initialize(ModelDao modelDao) {
-        KNNQueryBuilder.modelDao = modelDao;
-    }
-
     /**
      * @param in Reads from stream
      * @throws IOException Throws IO Exception
@@ -406,23 +397,11 @@ public class KNNQueryBuilder extends AbstractQueryBuilder<KNNQueryBuilder> imple
                         knnVectorFieldType.getVectorDataType()
                     )
                 ),
-                () -> knnMappingConfig.getModelId().ifPresentOrElse(modelId -> {
-                    ModelMetadata modelMetadata = getModelMetadataForField(modelId);
-                    queryConfigFromMapping.set(
-                        new QueryConfigFromMapping(
-                            modelMetadata.getKnnEngine(),
-                            modelMetadata.getMethodComponentContext(),
-                            modelMetadata.getSpaceType(),
-                            modelMetadata.getVectorDataType()
-                        )
+                () -> {
+                    throw new IllegalArgumentException(
+                        String.format(Locale.ROOT, "Field '%s' is not built for ANN search.", this.fieldName)
                     );
-                },
-                    () -> {
-                        throw new IllegalArgumentException(
-                            String.format(Locale.ROOT, "Field '%s' is not built for ANN search.", this.fieldName)
-                        );
-                    }
-                )
+                }
             );
         KNNEngine knnEngine = queryConfigFromMapping.get().getKnnEngine();
         MethodComponentContext methodComponentContext = queryConfigFromMapping.get().getMethodComponentContext();
@@ -586,14 +565,6 @@ public class KNNQueryBuilder extends AbstractQueryBuilder<KNNQueryBuilder> imple
             return RNNQueryFactory.create(createQueryRequest);
         }
         throw new IllegalArgumentException(String.format(Locale.ROOT, "[%s] requires k or distance or score to be set", NAME));
-    }
-
-    private ModelMetadata getModelMetadataForField(String modelId) {
-        ModelMetadata modelMetadata = modelDao.getMetadata(modelId);
-        if (!ModelUtil.isModelCreated(modelMetadata)) {
-            throw new IllegalArgumentException(String.format(Locale.ROOT, "Model ID '%s' is not created.", modelId));
-        }
-        return modelMetadata;
     }
 
     /**

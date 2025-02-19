@@ -37,14 +37,7 @@ public class KNNConstants {
     // used for defining toplevel parameter
     public static final String TOP_LEVEL_PARAMETER_SPACE_TYPE = METHOD_PARAMETER_SPACE_TYPE;
     public static final String COMPOUND_EXTENSION = "c";
-    public static final String MODEL = "model";
-    public static final String MODELS = "models";
-    public static final String MODEL_ID = "model_id";
-    public static final String MODEL_BLOB_PARAMETER = "model_blob";
-    public static final String MODEL_INDEX_MAPPING_PATH = "mappings/model-index.json";
-    public static final String MODEL_INDEX_NAME = ".opensearch-knn-models";
     public static final String PLUGIN_NAME = "knn";
-    public static final String MODEL_METADATA_FIELD = "knn-models";
     public static final Integer BYTES_PER_KILOBYTES = 1024;
     public static final String PREFERENCE_PARAMETER = "preference";
 

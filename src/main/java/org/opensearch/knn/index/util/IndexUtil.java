@@ -20,9 +20,6 @@ import org.opensearch.knn.index.VectorDataType;
 import org.opensearch.knn.index.mapper.KNNVectorFieldMapper;
 import org.opensearch.knn.index.query.request.MethodParameter;
 import org.opensearch.knn.index.engine.KNNEngine;
-import org.opensearch.knn.indices.ModelDao;
-import org.opensearch.knn.indices.ModelMetadata;
-import org.opensearch.knn.indices.ModelUtil;
 
 import java.io.File;
 import java.util.Collections;
@@ -83,8 +80,6 @@ public class IndexUtil {
      * @param field field name to validate
      * @param expectedDimension expected dimension of the field. If this value is negative, dimension will not be
      *                          checked
-     * @param modelDao used to look up dimension if field uses a model for initialization. Can be null if
-     *                 expectedDimension is negative
      * @return ValidationException exception produced by field validation
      */
     @SuppressWarnings("unchecked")
@@ -92,7 +87,6 @@ public class IndexUtil {
         IndexMetadata indexMetadata,
         String field,
         int expectedDimension,
-        ModelDao modelDao,
         VectorDataType trainRequestVectorDataType,
         KNNMethodContext trainRequestKnnMethodContext
     ) {
@@ -199,38 +193,7 @@ public class IndexUtil {
         // If dimension is null, the training index/field could use a model. In this case, we need to get the model id
         // for the index and then fetch its dimension from the models metadata
         if (dimension == null) {
-
-            String modelId = (String) fieldMap.get(KNNConstants.MODEL_ID);
-
-            if (modelId == null) {
-                exception.addValidationError(String.format("Field \"%s\" does not have a dimension set.", field));
-                return exception;
-            }
-
-            if (modelDao == null) {
-                throw new IllegalArgumentException(String.format("Field \"%s\" uses model. modelDao cannot be null.", field));
-            }
-
-            ModelMetadata modelMetadata = modelDao.getMetadata(modelId);
-            if (!ModelUtil.isModelCreated(modelMetadata)) {
-                exception.addValidationError(String.format("Model \"%s\" for field \"%s\" is not created.", modelId, field));
-                return exception;
-            }
-
-            dimension = modelMetadata.getDimension();
-            if ((Integer) dimension != expectedDimension) {
-                exception.addValidationError(
-                    String.format(
-                        "Field \"%s\" has dimension %d, which is different from " + "dimension specified in the training request: %d",
-                        field,
-                        dimension,
-                        expectedDimension
-                    )
-                );
-                return exception;
-            }
-
-            return null;
+            throw new IllegalArgumentException("Dimension should not be null");
         }
 
         // If the dimension was found in training fields mapping, check that it equals the models proposed dimension.

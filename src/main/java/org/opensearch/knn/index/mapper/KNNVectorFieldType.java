@@ -22,8 +22,6 @@ import org.opensearch.knn.index.KNNVectorIndexFieldData;
 import org.opensearch.knn.index.VectorDataType;
 import org.opensearch.knn.index.engine.KNNMethodContext;
 import org.opensearch.knn.index.query.rescore.RescoreContext;
-import org.opensearch.knn.indices.ModelDao;
-import org.opensearch.knn.indices.ModelMetadata;
 import org.opensearch.search.aggregations.support.CoreValuesSourceType;
 import org.opensearch.search.lookup.SearchLookup;
 
@@ -141,13 +139,6 @@ public class KNNVectorFieldType extends MappedFieldType {
         if (knnMethodContext.isPresent()) {
             KNNMethodContext context = knnMethodContext.get();
             VectorTransformerFactory.getVectorTransformer(context.getKnnEngine(), context.getSpaceType()).transform(vector);
-            return;
-        }
-        final Optional<String> modelId = knnMappingConfig.getModelId();
-        if (modelId.isPresent()) {
-            ModelDao modelDao = ModelDao.OpenSearchKNNModelDao.getInstance();
-            final ModelMetadata metadata = modelDao.getMetadata(modelId.get());
-            VectorTransformerFactory.getVectorTransformer(metadata.getKnnEngine(), metadata.getSpaceType()).transform(vector);
             return;
         }
         throw new IllegalStateException("Either KNN method context or Model Id should be configured");

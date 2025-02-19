@@ -16,13 +16,6 @@ import java.util.Optional;
  * accidentally configure an index that has multiple ways it can be created. This class is immutable.
  */
 public interface KNNMappingConfig {
-    /**
-     *
-     * @return Optional containing the modelId if created from model, otherwise empty
-     */
-    default Optional<String> getModelId() {
-        return Optional.empty();
-    }
 
     /**
      *
