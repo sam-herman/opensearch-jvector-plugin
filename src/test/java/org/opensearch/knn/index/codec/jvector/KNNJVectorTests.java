@@ -607,8 +607,8 @@ public class KNNJVectorTests extends LuceneTestCase {
                 TopDocs topDocs = searcher.search(knnFloatVectorQuery, k);
                 assertEquals(k, topDocs.totalHits.value());
                 float expectedMinScoreInTopK = VectorSimilarityFunction.EUCLIDEAN.compare(
-                        target,
-                        new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, k }
+                    target,
+                    new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, k }
                 );
                 final float recall = calculateRecall(topDocs, expectedMinScoreInTopK);
                 Assert.assertEquals(1.0f, recall, 0.05f);
@@ -624,7 +624,7 @@ public class KNNJVectorTests extends LuceneTestCase {
     @Test
     public void testJVectorKnnIndex_happyCase_withQuantization_multipleSegments() throws IOException {
         final int k = 50; // The number of nearest neighbours to gather, we set a high number here to avoid an inaccurate result and
-                           // jittery tests
+                          // jittery tests
         final int perfectBatchSize = DEFAULT_MINIMUM_BATCH_SIZE_FOR_QUANTIZATION; // MINIMUM_BATCH_SIZE_FOR_QUANTIZATION is the minimal
                                                                                   // batch size that will trigger a quantization without
                                                                                   // breaking it, generally speaking the batch size can't be
@@ -703,8 +703,8 @@ public class KNNJVectorTests extends LuceneTestCase {
                 TopDocs topDocs = searcher.search(knnFloatVectorQuery, k);
                 assertEquals(k, topDocs.totalHits.value());
                 float expectedMinScoreInTopK = VectorSimilarityFunction.EUCLIDEAN.compare(
-                        target,
-                        new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, k }
+                    target,
+                    new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, k }
                 );
                 final float recall = calculateRecall(topDocs, expectedMinScoreInTopK);
                 Assert.assertEquals(1.0f, recall, 0.05f);
@@ -720,7 +720,7 @@ public class KNNJVectorTests extends LuceneTestCase {
     @Test
     public void testJVectorKnnIndex_mixedBatchSizes_withQuantization_multipleMerges() throws IOException {
         final int k = 50; // The number of nearest neighbours to gather, we set a high number here to avoid an inaccurate result and
-                           // jittery tests
+                          // jittery tests
         final int notIdealBatchSize = DEFAULT_MINIMUM_BATCH_SIZE_FOR_QUANTIZATION / 3; // Batch size that is not ideal for quantization and
                                                                                        // shouldn't trigger it
         final int totalNumberOfDocs = notIdealBatchSize * 3; // 3 batches of documents each will result in quantization only when the merge
@@ -800,8 +800,8 @@ public class KNNJVectorTests extends LuceneTestCase {
                 TopDocs topDocs = searcher.search(knnFloatVectorQuery, k);
                 assertEquals(k, topDocs.totalHits.value());
                 float expectedMinScoreInTopK = VectorSimilarityFunction.EUCLIDEAN.compare(
-                        target,
-                        new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, k }
+                    target,
+                    new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, k }
                 );
                 final float recall = calculateRecall(topDocs, expectedMinScoreInTopK);
                 Assert.assertEquals(1.0f, recall, 0.05f);
@@ -824,7 +824,7 @@ public class KNNJVectorTests extends LuceneTestCase {
                 totalRelevantDocs++;
             }
         }
-        return ((float) totalRelevantDocs) / ((float)topDocs.scoreDocs.length);
+        return ((float) totalRelevantDocs) / ((float) topDocs.scoreDocs.length);
     }
 
 }
