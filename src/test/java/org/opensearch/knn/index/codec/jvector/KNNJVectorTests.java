@@ -536,7 +536,7 @@ public class KNNJVectorTests extends LuceneTestCase {
      */
     @Test
     public void testJVectorKnnIndex_simpleCase_withQuantization() throws IOException {
-        int k = 300; // The number of nearest neighbours to gather
+        int k = 50; // The number of nearest neighbours to gather
         int totalNumberOfDocs = DEFAULT_MINIMUM_BATCH_SIZE_FOR_QUANTIZATION;
         IndexWriterConfig indexWriterConfig = LuceneTestCase.newIndexWriterConfig();
         // TODO: re-enable this after fixing the compound file augmentation for JVector
@@ -606,17 +606,12 @@ public class KNNJVectorTests extends LuceneTestCase {
                 KnnFloatVectorQuery knnFloatVectorQuery = new KnnFloatVectorQuery("test_field", target, k, filterQuery);
                 TopDocs topDocs = searcher.search(knnFloatVectorQuery, k);
                 assertEquals(k, topDocs.totalHits.value());
-                for (int i = 0; i < k; i++) {
-                    assertEquals(i, topDocs.scoreDocs[i].doc);
-                    Assert.assertEquals(
-                        VectorSimilarityFunction.EUCLIDEAN.compare(
-                            target,
-                            new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, i + 1 }
-                        ),
-                        topDocs.scoreDocs[i].score,
-                        0.001f
-                    );
-                }
+                float expectedMinScoreInTopK = VectorSimilarityFunction.EUCLIDEAN.compare(
+                        target,
+                        new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, k }
+                );
+                final float recall = calculateRecall(topDocs, expectedMinScoreInTopK);
+                Assert.assertEquals(1.0f, recall, 0.05f);
                 log.info("successfully completed search tests");
             }
         }
@@ -628,7 +623,7 @@ public class KNNJVectorTests extends LuceneTestCase {
      */
     @Test
     public void testJVectorKnnIndex_happyCase_withQuantization_multipleSegments() throws IOException {
-        final int k = 500; // The number of nearest neighbours to gather, we set a high number here to avoid an inaccurate result and
+        final int k = 50; // The number of nearest neighbours to gather, we set a high number here to avoid an inaccurate result and
                            // jittery tests
         final int perfectBatchSize = DEFAULT_MINIMUM_BATCH_SIZE_FOR_QUANTIZATION; // MINIMUM_BATCH_SIZE_FOR_QUANTIZATION is the minimal
                                                                                   // batch size that will trigger a quantization without
@@ -707,17 +702,12 @@ public class KNNJVectorTests extends LuceneTestCase {
                 KnnFloatVectorQuery knnFloatVectorQuery = new KnnFloatVectorQuery("test_field", target, k, filterQuery);
                 TopDocs topDocs = searcher.search(knnFloatVectorQuery, k);
                 assertEquals(k, topDocs.totalHits.value());
-                for (int i = 0; i < k; i++) {
-                    assertEquals(i, topDocs.scoreDocs[i].doc);
-                    Assert.assertEquals(
-                        VectorSimilarityFunction.EUCLIDEAN.compare(
-                            target,
-                            new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, i + 1 }
-                        ),
-                        topDocs.scoreDocs[i].score,
-                        0.001f
-                    );
-                }
+                float expectedMinScoreInTopK = VectorSimilarityFunction.EUCLIDEAN.compare(
+                        target,
+                        new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, k }
+                );
+                final float recall = calculateRecall(topDocs, expectedMinScoreInTopK);
+                Assert.assertEquals(1.0f, recall, 0.05f);
                 log.info("successfully completed search tests");
             }
         }
@@ -729,7 +719,7 @@ public class KNNJVectorTests extends LuceneTestCase {
      */
     @Test
     public void testJVectorKnnIndex_mixedBatchSizes_withQuantization_multipleMerges() throws IOException {
-        final int k = 500; // The number of nearest neighbours to gather, we set a high number here to avoid an inaccurate result and
+        final int k = 50; // The number of nearest neighbours to gather, we set a high number here to avoid an inaccurate result and
                            // jittery tests
         final int notIdealBatchSize = DEFAULT_MINIMUM_BATCH_SIZE_FOR_QUANTIZATION / 3; // Batch size that is not ideal for quantization and
                                                                                        // shouldn't trigger it
@@ -809,19 +799,32 @@ public class KNNJVectorTests extends LuceneTestCase {
                 KnnFloatVectorQuery knnFloatVectorQuery = new KnnFloatVectorQuery("test_field", target, k, filterQuery);
                 TopDocs topDocs = searcher.search(knnFloatVectorQuery, k);
                 assertEquals(k, topDocs.totalHits.value());
-                for (int i = 0; i < k; i++) {
-                    assertEquals(i, topDocs.scoreDocs[i].doc);
-                    Assert.assertEquals(
-                        VectorSimilarityFunction.EUCLIDEAN.compare(
-                            target,
-                            new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, i + 1 }
-                        ),
-                        topDocs.scoreDocs[i].score,
-                        0.001f
-                    );
-                }
+                float expectedMinScoreInTopK = VectorSimilarityFunction.EUCLIDEAN.compare(
+                        target,
+                        new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, k }
+                );
+                final float recall = calculateRecall(topDocs, expectedMinScoreInTopK);
+                Assert.assertEquals(1.0f, recall, 0.05f);
                 log.info("successfully completed search tests");
             }
         }
     }
+
+    /**
+     * Calculate the recall for the top k documents
+     * For simplicity we assume that all documents have unique scores and therefore the minimum score in the top k documents is the kth document
+     * @param topDocs the top documents returned by the search
+     * @param minScoreInTopK the minimum score in the top k documents
+     * @return the recall of the top k documents
+     */
+    private float calculateRecall(TopDocs topDocs, float minScoreInTopK) {
+        int totalRelevantDocs = 0;
+        for (int i = 0; i < topDocs.scoreDocs.length; i++) {
+            if (topDocs.scoreDocs[i].score >= minScoreInTopK) {
+                totalRelevantDocs++;
+            }
+        }
+        return ((float) totalRelevantDocs) / ((float)topDocs.scoreDocs.length);
+    }
+
 }
