@@ -7,6 +7,8 @@ package org.opensearch.knn.index.codec.jvector;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.lucene.backward_codecs.lucene100.Lucene100Codec;
+import org.apache.lucene.backward_codecs.lucene912.Lucene912Codec;
 import org.apache.lucene.codecs.Codec;
 import org.apache.lucene.codecs.lucene101.Lucene101Codec;
 import org.apache.lucene.document.Document;
@@ -31,6 +33,8 @@ import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+import static org.opensearch.knn.index.codec.jvector.JVectorFormat.DEFAULT_MINIMUM_BATCH_SIZE_FOR_QUANTIZATION;
+
 @State(Scope.Thread)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
@@ -39,12 +43,17 @@ import java.util.concurrent.TimeUnit;
 @Fork(1)
 public class JVectorFormatBenchmark {
     private static final Logger log = LogManager.getLogger(JVectorFormatBenchmark.class);
+    private static final String JVECTOR_NOT_QUANTIZED = "jvector_not_quantized";
+    private static final String JVECTOR_QUANTIZED = "jvector_quantized";
+    private static final String LUCENE101 = "lucene101";
+    private static final String LUCENE100 = "lucene100";
+    private static final String LUCENE912 = "lucene912";
     private static final String FIELD_NAME = "vector_field";
     private static final int DIMENSION = 128;
     private static final int NUM_DOCS = 10_000;
     private static final int K = 100;
     private static final VectorSimilarityFunction SIMILARITY_FUNCTION = VectorSimilarityFunction.EUCLIDEAN;
-    @Param({ "jvector", "lucene" })  // This will run the benchmark for both codecs
+    @Param({ JVECTOR_NOT_QUANTIZED, JVECTOR_QUANTIZED, LUCENE101, LUCENE100, LUCENE912 })  // This will run the benchmark each codec type
     private String codecType;
 
     private Directory directory;
@@ -57,8 +66,11 @@ public class JVectorFormatBenchmark {
 
     private Codec getCodec() {
         return switch (codecType) {
-            case "jvector" -> new JVectorCodec();
-            case "lucene" -> new Lucene101Codec();
+            case JVECTOR_NOT_QUANTIZED -> new JVectorCodec(Integer.MAX_VALUE);
+            case JVECTOR_QUANTIZED -> new JVectorCodec(DEFAULT_MINIMUM_BATCH_SIZE_FOR_QUANTIZATION);
+            case LUCENE101 -> new Lucene101Codec();
+            case LUCENE100 -> new Lucene100Codec();
+            case LUCENE912 -> new Lucene912Codec();
             default -> throw new IllegalStateException("Unexpected codec type: " + codecType);
         };
     }
@@ -87,8 +99,8 @@ public class JVectorFormatBenchmark {
         // Create index with JVectorFormat
         IndexWriterConfig indexWriterConfig = new IndexWriterConfig();
         indexWriterConfig.setCodec(getCodec());
-        indexWriterConfig.setUseCompoundFile(false);
-        indexWriterConfig.setMergePolicy(new ForceMergesOnlyMergePolicy());
+        indexWriterConfig.setUseCompoundFile(true);
+        indexWriterConfig.setMergePolicy(new ForceMergesOnlyMergePolicy(true));
 
         try (IndexWriter writer = new IndexWriter(directory, indexWriterConfig)) {
             for (int i = 0; i < NUM_DOCS; i++) {
@@ -97,7 +109,7 @@ public class JVectorFormatBenchmark {
                 writer.addDocument(doc);
             }
             writer.commit();
-            log.info("Flushing docs to make them discoverable on the file system");
+            log.info("Flushing docs to make them discoverable on the file system and force merging all segments to get a single segment");
             writer.forceMerge(1);
         }
 

@@ -240,7 +240,7 @@ public class JVectorReader extends KnnVectorsReader {
                     throw new IllegalArgumentException("pqCodebooksAndVectorsOffset must be greater than vectorIndexOffset");
                 }
                 try (final var randomAccessReader = readerSupplier.get()) {
-                    randomAccessReader.seek(pqCodebooksAndVectorsOffset);
+                    randomAccessReader.seek(sliceOffset + pqCodebooksAndVectorsOffset);
                     this.pqVectors = PQVectors.load(randomAccessReader);
                 }
             } else {

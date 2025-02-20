@@ -810,6 +810,104 @@ public class KNNJVectorTests extends LuceneTestCase {
     }
 
     /**
+     * Test the non-ideal case where batch sizes are not perfect and are lower than the number of recommended clusters in the index
+     * The expected behavior is for the quantization to only kick in when we have a merge or batch size that is bigger than the minimal required batch size
+     * Also this is adding the compound file to the mix
+     */
+    @Test
+    public void testJVectorKnnIndex_mixedBatchSizes_withQuantization_multipleMerges_withCompoundFile() throws IOException {
+        final int k = 50; // The number of nearest neighbours to gather, we set a high number here to avoid an inaccurate result and
+        // jittery tests
+        final int notIdealBatchSize = DEFAULT_MINIMUM_BATCH_SIZE_FOR_QUANTIZATION / 3; // Batch size that is not ideal for quantization and
+        // shouldn't trigger it
+        final int totalNumberOfDocs = notIdealBatchSize * 30; // 3 batches of documents each will result in quantization only when the merge
+        // is triggered, and we have a batch size of {@link
+        // MINIMUM_BATCH_SIZE_FOR_QUANTIZATION} as a result of merging all the smaller
+        // batches
+
+        IndexWriterConfig indexWriterConfig = LuceneTestCase.newIndexWriterConfig();
+        // TODO: re-enable this after fixing the compound file augmentation for JVector
+        indexWriterConfig.setUseCompoundFile(true);
+        indexWriterConfig.setCodec(new JVectorCodec(DEFAULT_MINIMUM_BATCH_SIZE_FOR_QUANTIZATION));
+        indexWriterConfig.setMergePolicy(new ForceMergesOnlyMergePolicy(true));
+        // We set the below parameters to make sure no permature flush will occur, this way we can have a single segment, and we can force
+        // test the quantization case
+        indexWriterConfig.setMaxBufferedDocs(10000); // force flush every 10000 docs, this way we make sure that we only have a single
+        // segment for a totalNumberOfDocs < 1000
+        indexWriterConfig.setRAMPerThreadHardLimitMB(1000); // 1000MB per thread, this way we make sure that no premature flush will occur
+        final Path indexPath = createTempDir();
+        log.info("Index path: {}", indexPath);
+        try (
+            FSDirectory dir = new NIOFSDirectory(indexPath, FSLockFactory.getDefault());
+            IndexWriter w = new IndexWriter(dir, indexWriterConfig)
+        ) {
+            final float[] target = new float[] {
+                0.0f,
+                0.0f,
+                0.0f,
+                0.0f,
+                0.0f,
+                0.0f,
+                0.0f,
+                0.0f,
+                0.0f,
+                0.0f,
+                0.0f,
+                0.0f,
+                0.0f,
+                0.0f,
+                0.0f,
+                0.0f };
+            for (int i = 1; i < totalNumberOfDocs + 1; i++) {
+                final float[] source = new float[] {
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    0.0f,
+                    i };
+                final Document doc = new Document();
+                doc.add(new KnnFloatVectorField("test_field", source, VectorSimilarityFunction.EUCLIDEAN));
+                w.addDocument(doc);
+                if (i % notIdealBatchSize == 0) {
+                    w.commit();
+                }
+            }
+            log.info("Flushing docs to make them discoverable on the file system");
+            w.forceMerge(1);
+
+            try (IndexReader reader = DirectoryReader.open(w)) {
+                log.info("We should now have a single segment with {} documents", totalNumberOfDocs);
+                Assert.assertEquals(1, reader.getContext().leaves().size());
+                Assert.assertEquals(totalNumberOfDocs, reader.numDocs());
+
+                final Query filterQuery = new MatchAllDocsQuery();
+                final IndexSearcher searcher = newSearcher(reader);
+                KnnFloatVectorQuery knnFloatVectorQuery = new KnnFloatVectorQuery("test_field", target, k, filterQuery);
+                TopDocs topDocs = searcher.search(knnFloatVectorQuery, k);
+                assertEquals(k, topDocs.totalHits.value());
+                float expectedMinScoreInTopK = VectorSimilarityFunction.EUCLIDEAN.compare(
+                    target,
+                    new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, k }
+                );
+                final float recall = calculateRecall(topDocs, expectedMinScoreInTopK);
+                Assert.assertEquals(1.0f, recall, 0.05f);
+                log.info("successfully completed search tests");
+            }
+        }
+    }
+
+    /**
      * Calculate the recall for the top k documents
      * For simplicity we assume that all documents have unique scores and therefore the minimum score in the top k documents is the kth document
      * @param topDocs the top documents returned by the search
