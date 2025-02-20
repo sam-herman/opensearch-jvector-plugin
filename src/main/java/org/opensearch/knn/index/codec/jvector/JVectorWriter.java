@@ -243,7 +243,13 @@ public class JVectorWriter extends KnnVectorsWriter {
             resultBuilder.vectorIndexLength(endGraphOffset - startOffset);
 
             // If PQ is enabled and we have enough vectors, write the PQ codebooks and compressed vectors
-            if (fieldData.randomAccessVectorValues.size() >= JVectorFormat.DEFAULT_MINIMUM_BATCH_SIZE_FOR_QUANTIZATION) {
+            if (fieldData.randomAccessVectorValues.size() >= minimumBatchSizeForQuantization) {
+                log.info(
+                    "Writing PQ codebooks and vectors for field {} since the size is {} >= {}",
+                    fieldData.fieldInfo.name,
+                    fieldData.randomAccessVectorValues.size(),
+                    minimumBatchSizeForQuantization
+                );
                 resultBuilder.pqCodebooksAndVectorsOffset(endGraphOffset);
                 writePQCodebooksAndVectors(randomAccessWriter, fieldData);
                 resultBuilder.pqCodebooksAndVectorsLength(randomAccessWriter.position() - endGraphOffset);
@@ -399,7 +405,7 @@ public class JVectorWriter extends KnnVectorsWriter {
 
         @Override
         public void addValue(int docID, T vectorValue) throws IOException {
-            log.debug("Adding value {} to field {} in segment {}", vectorValue, fieldInfo.name, segmentName);
+            log.trace("Adding value {} to field {} in segment {}", vectorValue, fieldInfo.name, segmentName);
             if (docID == lastDocID) {
                 throw new IllegalArgumentException(
                     "VectorValuesField \""

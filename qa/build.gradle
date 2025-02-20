@@ -86,8 +86,8 @@ task pullBwcPlugin {
             into tmp_dir.absolutePath
         }
         copy {
-            from(java.nio.file.Path.of(tmp_dir.absolutePath, "opensearch-${knn_bwc_version_no_qualifier}", "plugins", "opensearch-knn"))
-            into java.nio.file.Path.of(tmp_dir.absolutePath, "opensearch-knn")
+            from(java.nio.file.Path.of(tmp_dir.absolutePath, "opensearch-${knn_bwc_version_no_qualifier}", "plugins", "opensearch-jvector"))
+            into java.nio.file.Path.of(tmp_dir.absolutePath, "opensearch-jvector")
         }
         delete java.nio.file.Path.of(tmp_dir.absolutePath, "opensearch-${knn_bwc_version_no_qualifier}"), java.nio.file.Path.of(tmp_dir.absolutePath, "opensearch-${knn_bwc_version_no_qualifier}-${os_platform}-x64.${file_ext}")
     }
@@ -96,11 +96,11 @@ task pullBwcPlugin {
 // Task to zip plugin from archive
 task zipBwcPlugin(type: Zip) {
     dependsOn "pullBwcPlugin"
-    from(java.nio.file.Path.of(tmp_dir.absolutePath, "opensearch-knn"))
+    from(java.nio.file.Path.of(tmp_dir.absolutePath, "opensearch-jvector"))
     destinationDirectory = tmp_dir
-    archiveFileName = "opensearch-knn-${knn_bwc_version_no_qualifier}.zip"
+    archiveFileName = "opensearch-jvector-${knn_bwc_version_no_qualifier}.zip"
     doLast {
-        delete java.nio.file.Path.of(tmp_dir.absolutePath, "opensearch-knn")
+        delete java.nio.file.Path.of(tmp_dir.absolutePath, "opensearch-jvector")
     }
 }
 

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package org.opensearch.knn.index.codec;
+package org.opensearch.knn.index.codec.jvector;
 
 import org.apache.lucene.index.MergePolicy;
 import org.apache.lucene.index.MergeTrigger;
@@ -14,6 +14,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * A merge policy that only merges segments if they are forced.
+ * This is useful for testing and benchmarking purposes. Since it can be used for benchmarks, it is placed in the common
+ * codec module.
+ */
 public class ForceMergesOnlyMergePolicy extends MergePolicy {
     private final boolean useCompoundFile;
 

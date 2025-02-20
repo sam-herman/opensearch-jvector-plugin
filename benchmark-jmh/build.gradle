@@ -1,0 +1,53 @@
+/*
+ *  Copyright OpenSearch Contributors
+ *  SPDX-License-Identifier: Apache-2.0
+ */
+import org.apache.tools.ant.taskdefs.condition.Os
+import java.nio.file.Files
+
+apply plugin: 'opensearch.testclusters'
+apply plugin: 'opensearch.build'
+apply plugin: 'opensearch.rest-test'
+apply plugin: 'me.champeau.jmh'
+
+// Disable a few tasks that come with build
+build.enabled = false
+integTest.enabled = false
+test.enabled = false
+assemble.enabled = false
+dependenciesInfo.enabled = false
+
+dependencies {
+    implementation project(':')
+    api "org.opensearch:opensearch:${opensearch_version}"
+
+    // Add JMH dependencies
+    jmh 'org.openjdk.jmh:jmh-core:1.36'
+    jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.36'
+
+    // Add logging dependencies
+    api "org.apache.logging.log4j:log4j-api:${versions.log4j}"
+    api "org.apache.logging.log4j:log4j-core:${versions.log4j}"
+
+    // Add other dependencies from main project that are needed for benchmarks
+    implementation 'io.github.jbellis:jvector:4.0.0-beta.1'
+    implementation 'org.agrona:agrona:1.20.0'
+
+    //testImplementation "org.opensearch.test:framework:${opensearch_version}"
+}
+
+jmh {
+    iterations = 5
+    warmupIterations = 2
+    fork = 1
+    jvmArgs = ['-Xms2G', '-Xmx2G']
+    resultFormat = 'JSON'
+    resultsFile = file("${buildDir}/reports/jmh/results.json")
+    humanOutputFile = file("${buildDir}/reports/jmh/human.txt")  // human readable output
+}
+
+// Ensure Java compatibility matches the main project
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}

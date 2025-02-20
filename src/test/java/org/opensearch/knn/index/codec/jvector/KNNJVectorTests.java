@@ -18,7 +18,6 @@ import org.apache.lucene.tests.index.RandomIndexWriter;
 import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Test;
-import org.opensearch.knn.index.codec.ForceMergesOnlyMergePolicy;
 
 import java.io.IOException;
 import java.nio.file.Path;

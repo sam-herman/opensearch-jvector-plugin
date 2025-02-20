@@ -230,6 +230,11 @@ public class JVectorReader extends KnnVectorsReader {
 
             // If quantized load the compressed product quantized vectors with their codebooks
             if (pqCodebooksAndVectorsLength > 0) {
+                log.debug(
+                    "Loading PQ codebooks and vectors for field {}, with numbers of vectors: {}",
+                    fieldInfo.name,
+                    state.segmentInfo.maxDoc()
+                );
                 assert pqCodebooksAndVectorsOffset > 0;
                 if (pqCodebooksAndVectorsOffset < vectorIndexOffset) {
                     throw new IllegalArgumentException("pqCodebooksAndVectorsOffset must be greater than vectorIndexOffset");
