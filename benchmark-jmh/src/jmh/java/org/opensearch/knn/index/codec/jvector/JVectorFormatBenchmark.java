@@ -45,22 +45,16 @@ public class JVectorFormatBenchmark {
     private static final Logger log = LogManager.getLogger(JVectorFormatBenchmark.class);
     private static final String JVECTOR_NOT_QUANTIZED = "jvector_not_quantized";
     private static final String JVECTOR_QUANTIZED = "jvector_quantized";
-    private static final String LUCENE101 = "lucene101";
-    private static final String LUCENE100 = "lucene100";
-    private static final String LUCENE912 = "lucene912";
+    private static final String LUCENE101 = "Lucene101";
     private static final String FIELD_NAME = "vector_field";
     private static final int DIMENSION = 128;
     private static final int NUM_DOCS = 10_000;
     private static final int K = 100;
     private static final VectorSimilarityFunction SIMILARITY_FUNCTION = VectorSimilarityFunction.EUCLIDEAN;
-    @Param({ JVECTOR_NOT_QUANTIZED, JVECTOR_QUANTIZED, LUCENE101, LUCENE100, LUCENE912 })  // This will run the benchmark each codec type
+    @Param({JVECTOR_NOT_QUANTIZED, JVECTOR_QUANTIZED, LUCENE101 })  // This will run the benchmark each codec type
     private String codecType;
 
     private Directory directory;
-    private float[][] vectors;
-    private float[] queryVector;
-    private float expectedMinScoreInTopK;
-    private Random random;
     private double totalRecall = 0.0;
     private int recallCount = 0;
 
@@ -69,31 +63,34 @@ public class JVectorFormatBenchmark {
             case JVECTOR_NOT_QUANTIZED -> new JVectorCodec(Integer.MAX_VALUE);
             case JVECTOR_QUANTIZED -> new JVectorCodec(DEFAULT_MINIMUM_BATCH_SIZE_FOR_QUANTIZATION);
             case LUCENE101 -> new Lucene101Codec();
-            case LUCENE100 -> new Lucene100Codec();
-            case LUCENE912 -> new Lucene912Codec();
             default -> throw new IllegalStateException("Unexpected codec type: " + codecType);
         };
     }
 
+    public static class TestData {
+        public static final float[][] VECTORS = new float[NUM_DOCS][DIMENSION];
+        public static final float[] QUERY_VECTOR = new float[DIMENSION];
+        public static final float EXPECTED_MIN_SCORE_IN_TOP_K;
+
+        static {
+            Random random = new Random(42);
+            for (int i = 0; i < NUM_DOCS; i++) {
+                for (int j = 0; j < DIMENSION; j++) {
+                    VECTORS[i][j] = random.nextFloat();
+                }
+            }
+
+            for (int i = 0; i < DIMENSION; i++) {
+                QUERY_VECTOR[i] = random.nextFloat();
+            }
+
+            EXPECTED_MIN_SCORE_IN_TOP_K = findExpectedKthMaxScore(QUERY_VECTOR, VECTORS, SIMILARITY_FUNCTION, K);
+        }
+    }
     @Setup
     public void setup() throws IOException {
-        random = new Random(42);
         final Path indexPath = Files.createTempDirectory("jvector-benchmark");
         log.info("Index path: {}", indexPath);
-        // Generate random vectors for indexing
-        vectors = new float[NUM_DOCS][DIMENSION];
-        for (int i = 0; i < NUM_DOCS; i++) {
-            for (int j = 0; j < DIMENSION; j++) {
-                vectors[i][j] = random.nextFloat();
-            }
-        }
-
-        // Generate query vector
-        queryVector = new float[DIMENSION];
-        for (int i = 0; i < DIMENSION; i++) {
-            queryVector[i] = random.nextFloat();
-        }
-
         directory = new NIOFSDirectory(indexPath, FSLockFactory.getDefault());
 
         // Create index with JVectorFormat
@@ -105,15 +102,13 @@ public class JVectorFormatBenchmark {
         try (IndexWriter writer = new IndexWriter(directory, indexWriterConfig)) {
             for (int i = 0; i < NUM_DOCS; i++) {
                 Document doc = new Document();
-                doc.add(new KnnFloatVectorField(FIELD_NAME, vectors[i]));
+                doc.add(new KnnFloatVectorField(FIELD_NAME, TestData.VECTORS[i]));
                 writer.addDocument(doc);
             }
             writer.commit();
             log.info("Flushing docs to make them discoverable on the file system and force merging all segments to get a single segment");
             writer.forceMerge(1);
         }
-
-        expectedMinScoreInTopK = findExpectedKthMaxScore(queryVector, vectors, SIMILARITY_FUNCTION, K);
     }
 
     @TearDown
@@ -139,11 +134,11 @@ public class JVectorFormatBenchmark {
     public RecallResult benchmarkSearch(Blackhole blackhole) throws IOException {
         try (DirectoryReader reader = DirectoryReader.open(directory)) {
             IndexSearcher searcher = new IndexSearcher(reader);
-            KnnFloatVectorQuery query = new KnnFloatVectorQuery(FIELD_NAME, queryVector, K);
+            KnnFloatVectorQuery query = new KnnFloatVectorQuery(FIELD_NAME, TestData.QUERY_VECTOR, K);
             TopDocs topDocs = searcher.search(query, K);
 
             // Calculate recall
-            float recall = calculateRecall(topDocs, expectedMinScoreInTopK);
+            float recall = calculateRecall(topDocs, TestData.EXPECTED_MIN_SCORE_IN_TOP_K);
             totalRecall += recall;
             recallCount++;
             return new RecallResult(recall);

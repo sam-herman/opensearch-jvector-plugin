@@ -25,7 +25,7 @@ public class JVectorFormat extends KnnVectorsFormat {
                                                                                 // quantization
     public static final int VERSION_START = 0;
     public static final int VERSION_CURRENT = VERSION_START;
-    private static final int DEFAULT_MAX_CONN = 16;
+    private static final int DEFAULT_MAX_CONN = 32;
     private static final int DEFAULT_BEAM_WIDTH = 100;
     private static final float DEFAULT_DEGREE_OVERFLOW = 1.2f;
     private static final float DEFAULT_ALPHA = 1.2f;
