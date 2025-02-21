@@ -113,6 +113,20 @@ public class FormatBenchmarkWithKnownDatasets {
         expectedMinScoreInTopK = findExpectedKthMaxScore(queryVector, vectors, vectorSimilarityFunction, K);
     }
 
+    // Print average recall after each iteration
+    @TearDown(Level.Iteration)
+    public void printIterationStats() {
+        log.info("Average recall: {}", totalRecall / recallCount);
+    }
+
+    @TearDown(Level.Trial)
+    public void printFinalStats() {
+        log.info("=== Benchmark Results ===");
+        log.info("Total Iterations: {}", recallCount);
+        log.info("Average Recall: {}", totalRecall / recallCount);
+        log.info("=====================");
+    }
+
     @Benchmark
     public RecallResult benchmarkSearch() throws IOException {
         try (DirectoryReader reader = DirectoryReader.open(directory)) {
