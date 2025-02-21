@@ -95,7 +95,7 @@ public class FormatBenchmarkRandomVectors {
             queryVector[i] = random.nextFloat();
         }
 
-        expectedMinScoreInTopK = findExpectedKthMaxScore(queryVector, vectors, SIMILARITY_FUNCTION, K);
+        expectedMinScoreInTopK = BenchmarkCommon.findExpectedKthMaxScore(queryVector, vectors, SIMILARITY_FUNCTION, K);
 
         final Path indexPath = Files.createTempDirectory("jvector-benchmark");
         log.info("Index path: {}", indexPath);
@@ -139,61 +139,17 @@ public class FormatBenchmarkRandomVectors {
     }
 
     @Benchmark
-    public RecallResult benchmarkSearch(Blackhole blackhole) throws IOException {
+    public BenchmarkCommon.RecallResult benchmarkSearch(Blackhole blackhole) throws IOException {
         try (DirectoryReader reader = DirectoryReader.open(directory)) {
             IndexSearcher searcher = new IndexSearcher(reader);
             KnnFloatVectorQuery query = new KnnFloatVectorQuery(FIELD_NAME, queryVector, K);
             TopDocs topDocs = searcher.search(query, K);
 
             // Calculate recall
-            float recall = calculateRecall(topDocs, expectedMinScoreInTopK);
+            float recall = BenchmarkCommon.calculateRecall(topDocs, expectedMinScoreInTopK);
             totalRecall += recall;
             recallCount++;
-            return new RecallResult(recall);
-        }
-    }
-
-    private static float calculateRecall(TopDocs topDocs, float expectedMinScoreInTopK) {
-        int relevantDocsFound = 0;
-        for (int i = 0; i < topDocs.scoreDocs.length; i++) {
-            if (topDocs.scoreDocs[i].score >= expectedMinScoreInTopK) {
-                relevantDocsFound++;
-            }
-        }
-
-        return (float) relevantDocsFound / K;
-    }
-
-    private static float findExpectedKthMaxScore(
-        float[] queryVector,
-        float[][] vectors,
-        VectorSimilarityFunction similarityFunction,
-        int k
-    ) {
-        final PriorityQueue<Float> topK = new PriorityQueue<>(k);
-        for (int i = 0; i < k; i++) {
-            topK.add(Float.NEGATIVE_INFINITY);
-        }
-
-        for (float[] vector : vectors) {
-            float score = similarityFunction.compare(queryVector, vector);
-            if (score > topK.peek()) {
-                topK.poll();
-                topK.add(score);
-            }
-        }
-
-        return topK.peek();
-    }
-
-    // Create a wrapper class for the result
-    public static class RecallResult {
-        public final float recall;
-        public final long timeNs;
-
-        public RecallResult(float recall) {
-            this.recall = recall;
-            this.timeNs = System.nanoTime();
+            return new BenchmarkCommon.RecallResult(recall);
         }
     }
 }
