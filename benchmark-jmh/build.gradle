@@ -17,6 +17,7 @@ test.enabled = false
 assemble.enabled = false
 dependenciesInfo.enabled = false
 
+def awssdk_version="2.21.10"
 dependencies {
     implementation project(':')
     api "org.opensearch:opensearch:${opensearch_version}"
@@ -34,6 +35,58 @@ dependencies {
     implementation 'org.agrona:agrona:1.20.0'
 
     //testImplementation "org.opensearch.test:framework:${opensearch_version}"
+
+    // Dependencies to poll datasets
+    implementation 'io.jhdf:jhdf:0.6.10'
+
+    implementation('com.indeed:util-mmap:1.0.52-3042601') {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
+
+    api("software.amazon.awssdk:s3-transfer-manager:${awssdk_version}") {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
+
+    api("software.amazon.awssdk:aws-crt-client:${awssdk_version}")
+
+    api("software.amazon.awssdk:s3:${awssdk_version}")
+
+    /*
+     * Opensearch is forcing us to directly include all transitive dependencies of awssdk
+     * while this is not ideal, the benefits of downloading the required datasets on-demand is better than bloating this repo by including the datasets
+     */
+    /**** Transitive dependencies of awssdk ****/
+    api("software.amazon.awssdk.crt:aws-crt:0.27.7")
+    api("software.amazon.awssdk:auth:${awssdk_version}")
+    api("software.amazon.awssdk:annotations:${awssdk_version}")
+    api("software.amazon.awssdk:apache-client:${awssdk_version}")
+    api("software.amazon.awssdk:arns:${awssdk_version}")
+    api("software.amazon.awssdk:aws-core:${awssdk_version}")
+    api("software.amazon.awssdk:aws-crt-client:${awssdk_version}")
+    api("software.amazon.awssdk:aws-query-protocol:${awssdk_version}")
+    api("software.amazon.awssdk:aws-xml-protocol:${awssdk_version}")
+    api("software.amazon.awssdk:checksums:${awssdk_version}")
+    api("software.amazon.awssdk:checksums-spi:${awssdk_version}")
+    api("software.amazon.awssdk:crt-core:${awssdk_version}")
+    api("software.amazon.awssdk:endpoints-spi:${awssdk_version}")
+    api("software.amazon.awssdk:http-auth:${awssdk_version}")
+    api("software.amazon.awssdk:http-auth-aws:${awssdk_version}")
+    api("software.amazon.awssdk:http-auth-spi:${awssdk_version}")
+    api("software.amazon.awssdk:http-client-spi:${awssdk_version}")
+    api("software.amazon.awssdk:identity-spi:${awssdk_version}")
+    api("software.amazon.awssdk:json-utils:${awssdk_version}")
+    api("software.amazon.awssdk:metrics-spi:${awssdk_version}")
+    api("software.amazon.awssdk:netty-nio-client:${awssdk_version}")
+    api("software.amazon.awssdk:profiles:${awssdk_version}")
+    api("software.amazon.awssdk:protocol-core:${awssdk_version}")
+    api("software.amazon.awssdk:regions:${awssdk_version}")
+    api("software.amazon.awssdk:sdk-core:${awssdk_version}")
+    api("software.amazon.awssdk:third-party-jackson-core:${awssdk_version}")
+    api("software.amazon.awssdk:utils:${awssdk_version}")
+    /*** End of transitive dependencies of awssdk ***/
+
+
+    implementation platform('com.kohlschutter.junixsocket:junixsocket-core:2.8.1')
 }
 
 jmh {
@@ -44,6 +97,11 @@ jmh {
     resultFormat = 'JSON'
     resultsFile = file("${buildDir}/reports/jmh/results.json")
     humanOutputFile = file("${buildDir}/reports/jmh/human.txt")  // human readable output
+
+    // Add these lines to handle include patterns
+    if (project.hasProperty('jmhInclude')) {
+        includes = [project.jmhInclude]
+    }
 }
 
 // Ensure Java compatibility matches the main project

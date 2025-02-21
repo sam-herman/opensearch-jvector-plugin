@@ -18,4 +18,5 @@ build
 # Ignore built files
 bin
 lib
-
+# Ignore directories where downloaded datasets are stored
+fvec
