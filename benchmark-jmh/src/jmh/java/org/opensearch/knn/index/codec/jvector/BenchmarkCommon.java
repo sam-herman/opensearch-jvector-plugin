@@ -1,3 +1,7 @@
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package org.opensearch.knn.index.codec.jvector;
 
 import org.apache.lucene.codecs.Codec;
@@ -47,10 +51,10 @@ public class BenchmarkCommon {
     }
 
     public static float findExpectedKthMaxScore(
-            float[] queryVector,
-            float[][] vectors,
-            VectorSimilarityFunction similarityFunction,
-            int k
+        float[] queryVector,
+        float[][] vectors,
+        VectorSimilarityFunction similarityFunction,
+        int k
     ) {
         final PriorityQueue<Float> topK = new PriorityQueue<>(k);
         for (int i = 0; i < k; i++) {

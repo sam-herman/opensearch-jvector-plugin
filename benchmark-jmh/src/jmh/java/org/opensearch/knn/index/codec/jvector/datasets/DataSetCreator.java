@@ -43,23 +43,29 @@ public class DataSetCreator {
         var baseVectors = new ArrayList<VectorFloat<?>>();
         for (int x = 0; x < gridWidth; x++) {
             for (int y = 0; y < gridWidth; y++) {
-                baseVectors.add(vectorTypeSupport.createFloatVector(new float[] {x, y}));
+                baseVectors.add(vectorTypeSupport.createFloatVector(new float[] { x, y }));
             }
         }
 
         // Create query vectors and compute ground truth
         var queries = IntStream.range(0, nQueries).parallel().mapToObj(i -> {
             var R = ThreadLocalRandom.current();
-            float[] q = new float[] {gridWidth * R.nextFloat(), gridWidth * R.nextFloat()};
+            float[] q = new float[] { gridWidth * R.nextFloat(), gridWidth * R.nextFloat() };
 
             // Compute the ground truth within a bounding box around the query point
-            Set<Integer> gt = IntStream.range(0, baseVectors.size())
-                .filter(j -> {
-                    VectorFloat<?> v = baseVectors.get(j);
-                    return v.get(0) >= q[0] - topK && v.get(0) <= q[0] + topK && v.get(1) >= q[1] - topK && v.get(1) <= q[1] + topK;
-                })
+            Set<Integer> gt = IntStream.range(0, baseVectors.size()).filter(j -> {
+                VectorFloat<?> v = baseVectors.get(j);
+                return v.get(0) >= q[0] - topK && v.get(0) <= q[0] + topK && v.get(1) >= q[1] - topK && v.get(1) <= q[1] + topK;
+            })
                 .boxed() // allows sorting with custom comparator
-                .sorted(Comparator.comparingDouble((Integer j) -> VectorSimilarityFunction.EUCLIDEAN.compare(vectorTypeSupport.createFloatVector(q), baseVectors.get(j))).reversed())
+                .sorted(
+                    Comparator.comparingDouble(
+                        (Integer j) -> VectorSimilarityFunction.EUCLIDEAN.compare(
+                            vectorTypeSupport.createFloatVector(q),
+                            baseVectors.get(j)
+                        )
+                    ).reversed()
+                )
                 .limit(topK)
                 .collect(Collectors.toSet());
 

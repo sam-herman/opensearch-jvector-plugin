@@ -43,11 +43,9 @@ public class DownloadHelper {
 
     private static S3AsyncClientBuilder s3AsyncClientBuilder() {
         return S3AsyncClient.builder()
-                .region(Region.US_EAST_1)
-                .httpClient(AwsCrtAsyncHttpClient.builder()
-                        .maxConcurrency(1)
-                        .build())
-                .credentialsProvider(AnonymousCredentialsProvider.create());
+            .region(Region.US_EAST_1)
+            .httpClient(AwsCrtAsyncHttpClient.builder().maxConcurrency(1).build())
+            .credentialsProvider(AnonymousCredentialsProvider.create());
     }
 
     public static MultiFileDatasource maybeDownloadFvecs(String name) {
@@ -74,12 +72,11 @@ public class DownloadHelper {
 
                 var urlPath = pathFragment.toString().replace('\\', '/');
                 System.out.println("Downloading: " + urlPath);
-                DownloadFileRequest downloadFileRequest =
-                        DownloadFileRequest.builder()
-                                .getObjectRequest(b -> b.bucket(bucketName).key(urlPath))
-                                .addTransferListener(LoggingTransferListener.create())
-                                .destination(Paths.get(localPath.toString()))
-                                .build();
+                DownloadFileRequest downloadFileRequest = DownloadFileRequest.builder()
+                    .getObjectRequest(b -> b.bucket(bucketName).key(urlPath))
+                    .addTransferListener(LoggingTransferListener.create())
+                    .destination(Paths.get(localPath.toString()))
+                    .build();
 
                 // 3 retries
                 for (int i = 0; i < 3; i++) {

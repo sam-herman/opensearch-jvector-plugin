@@ -7,8 +7,6 @@ package org.opensearch.knn.index.codec.jvector;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.lucene.codecs.Codec;
-import org.apache.lucene.codecs.lucene101.Lucene101Codec;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.KnnFloatVectorField;
 import org.apache.lucene.index.DirectoryReader;
@@ -27,11 +25,8 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
-
-import static org.opensearch.knn.index.codec.jvector.JVectorFormat.DEFAULT_MINIMUM_BATCH_SIZE_FOR_QUANTIZATION;
 
 /**
  * Benchmark to compare the performance of JVector and Lucene codecs with random vectors.
@@ -54,11 +49,11 @@ public class FormatBenchmarkRandomVectors {
     private static final String FIELD_NAME = "vector_field";
     private static final int K = 100;
     private static final VectorSimilarityFunction SIMILARITY_FUNCTION = VectorSimilarityFunction.EUCLIDEAN;
-    @Param({JVECTOR_NOT_QUANTIZED/*, JVECTOR_QUANTIZED*/, LUCENE101 })  // This will run the benchmark each codec type
+    @Param({ JVECTOR_NOT_QUANTIZED/*, JVECTOR_QUANTIZED*/, LUCENE101 })  // This will run the benchmark each codec type
     private String codecType;
-    @Param({"1000", "10000", "100000"})
+    @Param({ "1000", "10000", "100000" })
     private int numDocs;
-    @Param({"128", "256", "512", "1024"})
+    @Param({ /*"128", "256",*/ "512", /*"1024"*/ })
     private int dimension;
 
     private float[][] vectors;
@@ -68,15 +63,6 @@ public class FormatBenchmarkRandomVectors {
     private Directory directory;
     private double totalRecall = 0.0;
     private int recallCount = 0;
-
-    private Codec getCodec() {
-        return switch (codecType) {
-            case JVECTOR_NOT_QUANTIZED -> new JVectorCodec(Integer.MAX_VALUE);
-            case JVECTOR_QUANTIZED -> new JVectorCodec(DEFAULT_MINIMUM_BATCH_SIZE_FOR_QUANTIZATION);
-            case LUCENE101 -> new Lucene101Codec();
-            default -> throw new IllegalStateException("Unexpected codec type: " + codecType);
-        };
-    }
 
     @Setup
     public void setup() throws IOException {
@@ -103,7 +89,7 @@ public class FormatBenchmarkRandomVectors {
 
         // Create index with JVectorFormat
         IndexWriterConfig indexWriterConfig = new IndexWriterConfig();
-        indexWriterConfig.setCodec(getCodec());
+        indexWriterConfig.setCodec(BenchmarkCommon.getCodec(codecType));
         indexWriterConfig.setUseCompoundFile(true);
         indexWriterConfig.setMergePolicy(new ForceMergesOnlyMergePolicy(true));
 

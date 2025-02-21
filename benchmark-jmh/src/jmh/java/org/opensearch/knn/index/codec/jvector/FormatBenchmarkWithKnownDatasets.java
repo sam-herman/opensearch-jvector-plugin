@@ -1,6 +1,9 @@
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package org.opensearch.knn.index.codec.jvector;
 
-import io.github.jbellis.jvector.vector.types.VectorFloat;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.document.Document;
@@ -18,6 +21,7 @@ import org.apache.lucene.store.NIOFSDirectory;
 import org.openjdk.jmh.annotations.*;
 import org.opensearch.knn.index.codec.jvector.datasets.DataSet;
 import org.opensearch.knn.index.codec.jvector.datasets.DownloadHelper;
+import org.opensearch.knn.index.codec.jvector.datasets.Hdf5Loader;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -41,18 +45,33 @@ import static org.opensearch.knn.index.codec.jvector.BenchmarkCommon.*;
 @Fork(1)
 public class FormatBenchmarkWithKnownDatasets {
     Logger log = LogManager.getLogger(FormatBenchmarkWithKnownDatasets.class);
-    // large embeddings calculated by Neighborhood Watch.  100k files by default; 1M also available
-    private static List<String> LARGE_DATASETS = List.of(
-            "ada002-100k",
-            "cohere-english-v3-100k",
-            "openai-v3-small-100k",
-            "nv-qa-v4-100k",
-            "colbert-1M",
-            "gecko-100k");
+    // large embeddings calculated by Neighborhood Watch. 100k files by default; 1M also available
+    private static final List<String> LARGE_DATASETS = List.of(
+        "ada002-100k",
+        "cohere-english-v3-100k",
+        "openai-v3-small-100k",
+        "nv-qa-v4-100k",
+        "colbert-1M",
+        "gecko-100k"
+    );
 
-    @Param("ada002-100k")
+    // smaller vectors from ann-benchmarks
+    private static final List<String> SMALL_DATASETS = List.of(
+        // large files not yet supported
+        // "hdf5/deep-image-96-angular.hdf5",
+        // "hdf5/gist-960-euclidean.hdf5",
+        "glove-25-angular.hdf5",
+        "glove-50-angular.hdf5",
+        "lastfm-64-dot.hdf5",
+        "glove-100-angular.hdf5",
+        "glove-200-angular.hdf5",
+        "nytimes-256-angular.hdf5",
+        "sift-128-euclidean.hdf5"
+    );
+
+    @Param({ "nytimes-256-angular.hdf5"/*, "ada002-100k"*/ })
     private String datasetName;
-    @Param({JVECTOR_NOT_QUANTIZED/*, JVECTOR_QUANTIZED*/, LUCENE101 })  // This will run the benchmark each codec type
+    @Param({ JVECTOR_NOT_QUANTIZED/*, JVECTOR_QUANTIZED*/, LUCENE101 })  // This will run the benchmark each codec type
     private String codecType;
     private DataSet dataset;
     private static final int K = 100;
@@ -67,11 +86,18 @@ public class FormatBenchmarkWithKnownDatasets {
     @Setup
     public void setup() throws IOException {
         // Download datasets
-        var mfd = DownloadHelper.maybeDownloadFvecs(datasetName);
-        try {
-            dataset = mfd.load();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        if (LARGE_DATASETS.contains(datasetName)) {
+            var mfd = DownloadHelper.maybeDownloadFvecs(datasetName);
+            try {
+                dataset = mfd.load();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        } else if (SMALL_DATASETS.contains(datasetName)) {
+            DownloadHelper.maybeDownloadHdf5(datasetName);
+            dataset = Hdf5Loader.load(datasetName);
+        } else {
+            throw new IllegalArgumentException("Unknown dataset: " + datasetName);
         }
 
         final Path indexPath = Files.createTempDirectory("jvector-benchmark");

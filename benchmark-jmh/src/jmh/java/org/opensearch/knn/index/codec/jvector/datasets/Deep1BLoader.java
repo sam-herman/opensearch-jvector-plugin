@@ -56,8 +56,7 @@ public class Deep1BLoader {
                     floatBuffer.get(vector);
                     vectors[threadNum * perThread + (Math.min(threadNum, remainder)) + j] = vector;
                 }
-            }
-            catch (IOException e) {
+            } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
         });

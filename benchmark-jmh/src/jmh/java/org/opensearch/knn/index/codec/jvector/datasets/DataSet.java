@@ -32,12 +32,13 @@ public class DataSet {
     public final List<? extends Set<Integer>> groundTruth;
     private RandomAccessVectorValues baseRavv;
 
-    public DataSet(String name,
-                   VectorSimilarityFunction similarityFunction,
-                   List<VectorFloat<?>> baseVectors,
-                   List<VectorFloat<?>> queryVectors,
-                   List<? extends Set<Integer>> groundTruth)
-    {
+    public DataSet(
+        String name,
+        VectorSimilarityFunction similarityFunction,
+        List<VectorFloat<?>> baseVectors,
+        List<VectorFloat<?>> queryVectors,
+        List<? extends Set<Integer>> groundTruth
+    ) {
         if (baseVectors.isEmpty()) {
             throw new IllegalArgumentException("Base vectors must not be empty");
         }
@@ -61,20 +62,26 @@ public class DataSet {
         this.queryVectors = queryVectors;
         this.groundTruth = groundTruth;
 
-        System.out.format("%n%s: %d base and %d query vectors created, dimensions %d%n",
-                name, baseVectors.size(), queryVectors.size(), baseVectors.get(0).length());
+        System.out.format(
+            "%n%s: %d base and %d query vectors created, dimensions %d%n",
+            name,
+            baseVectors.size(),
+            queryVectors.size(),
+            baseVectors.get(0).length()
+        );
     }
 
     /**
      * Return a dataset containing the given vectors, scrubbed free from zero vectors and normalized to unit length.
      * Note: This only scrubs and normalizes for dot product similarity.
      */
-    public static DataSet getScrubbedDataSet(String pathStr,
-                                             VectorSimilarityFunction vsf,
-                                             List<VectorFloat<?>> baseVectors,
-                                             List<VectorFloat<?>> queryVectors,
-                                             List<Set<Integer>> groundTruth)
-    {
+    public static DataSet getScrubbedDataSet(
+        String pathStr,
+        VectorSimilarityFunction vsf,
+        List<VectorFloat<?>> baseVectors,
+        List<VectorFloat<?>> queryVectors,
+        List<Set<Integer>> groundTruth
+    ) {
         // remove zero vectors and duplicates, noting that this will change the indexes of the ground truth answers
         List<VectorFloat<?>> scrubbedBaseVectors;
         List<VectorFloat<?>> scrubbedQueryVectors;
