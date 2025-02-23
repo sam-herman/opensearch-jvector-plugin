@@ -23,6 +23,7 @@ import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Random;
@@ -38,8 +39,8 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Thread)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-@Warmup(iterations = 2)
-@Measurement(iterations = 5)
+@Warmup(iterations = 1)
+@Measurement(iterations = 3)
 @Fork(1)
 public class FormatBenchmarkRandomVectors {
     private static final Logger log = LogManager.getLogger(FormatBenchmarkRandomVectors.class);
@@ -53,14 +54,16 @@ public class FormatBenchmarkRandomVectors {
     private String codecType;
     @Param({ "1000", "10000", "100000" })
     private int numDocs;
-    @Param({ /*"128", "256",*/ "512", /*"1024"*/ })
+    @Param({ "128", /*"256", "512", "1024"*/ })
     private int dimension;
 
     private float[][] vectors;
     private float[] queryVector;
     private float expectedMinScoreInTopK;
-
     private Directory directory;
+    private DirectoryReader directoryReader;
+    private Path indexDirectoryPath;
+    private IndexSearcher searcher;
     private double totalRecall = 0.0;
     private int recallCount = 0;
 
@@ -83,9 +86,9 @@ public class FormatBenchmarkRandomVectors {
 
         expectedMinScoreInTopK = BenchmarkCommon.findExpectedKthMaxScore(queryVector, vectors, SIMILARITY_FUNCTION, K);
 
-        final Path indexPath = Files.createTempDirectory("jvector-benchmark");
-        log.info("Index path: {}", indexPath);
-        directory = new NIOFSDirectory(indexPath, FSLockFactory.getDefault());
+        indexDirectoryPath = Files.createTempDirectory("jvector-benchmark");
+        log.info("Index path: {}", indexDirectoryPath);
+        directory = new NIOFSDirectory(indexDirectoryPath, FSLockFactory.getDefault());
 
         // Create index with JVectorFormat
         IndexWriterConfig indexWriterConfig = new IndexWriterConfig();
@@ -103,11 +106,24 @@ public class FormatBenchmarkRandomVectors {
             log.info("Flushing docs to make them discoverable on the file system and force merging all segments to get a single segment");
             writer.forceMerge(1);
         }
+        directoryReader = DirectoryReader.open(directory);
+        searcher = new IndexSearcher(directoryReader);
     }
 
     @TearDown
     public void tearDown() throws IOException {
+        directoryReader.close();
         directory.close();
+        // Cleanup previously created index directory
+        Files.walk(indexDirectoryPath)
+                .sorted((path1, path2) -> path2.compareTo(path1)) // Reverse order to delete files before directories
+                .forEach(path -> {
+                    try {
+                        Files.delete(path);
+                    } catch (IOException e) {
+                        throw new UncheckedIOException("Failed to delete " + path, e);
+                    }
+                });
     }
 
     // Print average recall after each iteration
@@ -126,16 +142,13 @@ public class FormatBenchmarkRandomVectors {
 
     @Benchmark
     public BenchmarkCommon.RecallResult benchmarkSearch(Blackhole blackhole) throws IOException {
-        try (DirectoryReader reader = DirectoryReader.open(directory)) {
-            IndexSearcher searcher = new IndexSearcher(reader);
-            KnnFloatVectorQuery query = new KnnFloatVectorQuery(FIELD_NAME, queryVector, K);
-            TopDocs topDocs = searcher.search(query, K);
+        KnnFloatVectorQuery query = new KnnFloatVectorQuery(FIELD_NAME, queryVector, K);
+        TopDocs topDocs = searcher.search(query, K);
 
-            // Calculate recall
-            float recall = BenchmarkCommon.calculateRecall(topDocs, expectedMinScoreInTopK);
-            totalRecall += recall;
-            recallCount++;
-            return new BenchmarkCommon.RecallResult(recall);
-        }
+        // Calculate recall
+        float recall = BenchmarkCommon.calculateRecall(topDocs, expectedMinScoreInTopK);
+        totalRecall += recall;
+        recallCount++;
+        return new BenchmarkCommon.RecallResult(recall);
     }
 }

@@ -124,14 +124,10 @@ public class JVectorReader extends KnnVectorsReader {
         } else { // Not quantized, used typical searcher
             ssp = SearchScoreProvider.exact(q, fieldEntryMap.get(field).similarityFunction, index.getView());
         }
-        try (GraphSearcher searcher = new GraphSearcher(index)) {
-            // Adapt acceptDocs to io.github.jbellis.jvector.util.Bits
-            io.github.jbellis.jvector.util.Bits compatibleBits = doc -> acceptDocs == null || acceptDocs.get(doc);
-
-            SearchResult sr = searcher.search(ssp, knnCollector.k(), compatibleBits);
-            for (SearchResult.NodeScore ns : sr.getNodes()) {
-                knnCollector.collect(ns.node, ns.score);
-            }
+        io.github.jbellis.jvector.util.Bits compatibleBits = doc -> acceptDocs == null || acceptDocs.get(doc);
+        final var sr = fieldEntryMap.get(field).graphSearcher.search(ssp, knnCollector.k(), compatibleBits);
+        for (SearchResult.NodeScore ns : sr.getNodes()) {
+            knnCollector.collect(ns.node, ns.score);
         }
     }
 
@@ -143,6 +139,7 @@ public class JVectorReader extends KnnVectorsReader {
     @Override
     public void close() throws IOException {
         for (FieldEntry fieldEntry : fieldEntryMap.values()) {
+            IOUtils.close(fieldEntry.graphSearcher);
             IOUtils.close(fieldEntry.readerSupplier::close);
         }
     }
@@ -167,6 +164,7 @@ public class JVectorReader extends KnnVectorsReader {
         private final long pqCodebooksAndVectorsOffset;
         private final ReaderSupplier readerSupplier;
         private final OnDiskGraphIndex index;
+        private final GraphSearcher graphSearcher;
         private final PQVectors pqVectors; // The product quantized vectors with their codebooks
 
         public FieldEntry(FieldInfo fieldInfo, JVectorWriter.VectorIndexFieldMetadata vectorIndexFieldMetadata) throws IOException {
@@ -227,7 +225,7 @@ public class JVectorReader extends KnnVectorsReader {
             // Load the graph index
             this.readerSupplier = ReaderSupplierFactory.open(indexFilePath);
             this.index = OnDiskGraphIndex.load(readerSupplier, sliceOffset + vectorIndexOffset);
-
+            this.graphSearcher = new GraphSearcher(index);
             // If quantized load the compressed product quantized vectors with their codebooks
             if (pqCodebooksAndVectorsLength > 0) {
                 log.debug(
@@ -279,7 +277,7 @@ public class JVectorReader extends KnnVectorsReader {
             VectorSimilarityFunction.COSINE
         );
 
-        public static final Map<org.apache.lucene.index.VectorSimilarityFunction, VectorSimilarityFunction> luceneToJVectorMap = Map.of(
+        public static final Map<org.apache.lucene.index.VectorSimilarityFunction, VectorSimilarityFunction> LUCENE_TO_JVECTOR_MAP = Map.of(
             org.apache.lucene.index.VectorSimilarityFunction.EUCLIDEAN,
             VectorSimilarityFunction.EUCLIDEAN,
             org.apache.lucene.index.VectorSimilarityFunction.DOT_PRODUCT,
@@ -289,8 +287,8 @@ public class JVectorReader extends KnnVectorsReader {
         );
 
         public static int distFuncToOrd(org.apache.lucene.index.VectorSimilarityFunction func) {
-            if (luceneToJVectorMap.containsKey(func)) {
-                return JVECTOR_SUPPORTED_SIMILARITY_FUNCTIONS.indexOf(luceneToJVectorMap.get(func));
+            if (LUCENE_TO_JVECTOR_MAP.containsKey(func)) {
+                return JVECTOR_SUPPORTED_SIMILARITY_FUNCTIONS.indexOf(LUCENE_TO_JVECTOR_MAP.get(func));
             }
 
             throw new IllegalArgumentException("invalid distance function: " + func);
@@ -305,7 +303,7 @@ public class JVectorReader extends KnnVectorsReader {
                 throw new IllegalArgumentException("Invalid ordinal: " + ord);
             }
             VectorSimilarityFunction jvectorFunc = JVECTOR_SUPPORTED_SIMILARITY_FUNCTIONS.get(ord);
-            for (Map.Entry<org.apache.lucene.index.VectorSimilarityFunction, VectorSimilarityFunction> entry : luceneToJVectorMap
+            for (Map.Entry<org.apache.lucene.index.VectorSimilarityFunction, VectorSimilarityFunction> entry : LUCENE_TO_JVECTOR_MAP
                 .entrySet()) {
                 if (entry.getValue().equals(jvectorFunc)) {
                     return entry.getKey();
