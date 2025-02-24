@@ -22,3 +22,5 @@ lib
 # Ignore directories where downloaded datasets are stored
 fvec
 hdf5
+
+.DS_store
