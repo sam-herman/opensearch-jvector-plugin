@@ -51,7 +51,7 @@ public class CachelessFormatBenchmarkRandomVectors {
     private static final VectorSimilarityFunction SIMILARITY_FUNCTION = VectorSimilarityFunction.EUCLIDEAN;
     @Param({ JVECTOR_NOT_QUANTIZED, JVECTOR_QUANTIZED, LUCENE101 })  // This will run the benchmark each codec type
     private String codecType;
-    @Param({ "1000", "10000", "100000" })
+    @Param({ /*"1000", "10000",*/ "100000" })
     private int numDocs;
     @Param({ "128", /*"256", "512", "1024"*/ })
     private int dimension;
@@ -107,6 +107,7 @@ public class CachelessFormatBenchmarkRandomVectors {
         }
         directoryReader = DirectoryReader.open(directory);
         searcher = new IndexSearcher(directoryReader);
+        dropCaches();
     }
 
     @TearDown
@@ -127,8 +128,9 @@ public class CachelessFormatBenchmarkRandomVectors {
 
     // Print average recall after each iteration
     @TearDown(Level.Iteration)
-    public void printIterationStats() {
+    public void printIterationStats() throws IOException {
         log.info("Average recall: {}", totalRecall / recallCount);
+        dropCaches();
     }
 
     @TearDown(Level.Trial)
