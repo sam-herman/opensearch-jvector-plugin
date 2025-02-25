@@ -69,7 +69,7 @@ public class FormatBenchmarkWithKnownDatasets {
         "sift-128-euclidean.hdf5"
     );
 
-    @Param({ "nytimes-256-angular.hdf5"/*, "ada002-100k"*/ })
+    @Param({ "sift-128-euclidean.hdf5", /*"nytimes-256-angular.hdf5", "ada002-100k"*/ })
     private String datasetName;
     @Param({ JVECTOR_NOT_QUANTIZED/*, JVECTOR_QUANTIZED*/, LUCENE101 })  // This will run the benchmark each codec type
     private String codecType;
@@ -77,6 +77,9 @@ public class FormatBenchmarkWithKnownDatasets {
     private static final int K = 100;
 
     private Directory directory;
+    private DirectoryReader directoryReader;
+    private Path indexDirectoryPath;
+    private IndexSearcher searcher;
     private float[] queryVector;
     private float expectedMinScoreInTopK;
     private VectorSimilarityFunction vectorSimilarityFunction;
@@ -134,7 +137,8 @@ public class FormatBenchmarkWithKnownDatasets {
             log.info("Flushing docs to make them discoverable on the file system and force merging all segments to get a single segment");
             writer.forceMerge(1);
         }
-
+        directoryReader = DirectoryReader.open(directory);
+        searcher = new IndexSearcher(directoryReader);
         queryVector = (float[]) dataset.queryVectors.getFirst().get();
         expectedMinScoreInTopK = findExpectedKthMaxScore(queryVector, vectors, vectorSimilarityFunction, K);
     }
@@ -153,18 +157,31 @@ public class FormatBenchmarkWithKnownDatasets {
         log.info("=====================");
     }
 
+    @TearDown
+    public void tearDown() throws IOException {
+        directoryReader.close();
+        directory.close();
+        // Cleanup previously created index directory
+        Files.walk(indexDirectoryPath)
+                .sorted((path1, path2) -> path2.compareTo(path1)) // Reverse order to delete files before directories
+                .forEach(path -> {
+                    try {
+                        Files.delete(path);
+                    } catch (IOException e) {
+                        throw new UncheckedIOException("Failed to delete " + path, e);
+                    }
+                });
+    }
+
     @Benchmark
     public RecallResult benchmarkSearch() throws IOException {
-        try (DirectoryReader reader = DirectoryReader.open(directory)) {
-            IndexSearcher searcher = new IndexSearcher(reader);
-            KnnFloatVectorQuery query = new KnnFloatVectorQuery(FIELD_NAME, queryVector, K);
-            TopDocs topDocs = searcher.search(query, K);
+        KnnFloatVectorQuery query = new KnnFloatVectorQuery(FIELD_NAME, queryVector, K);
+        TopDocs topDocs = searcher.search(query, K);
 
-            // Calculate recall
-            float recall = calculateRecall(topDocs, expectedMinScoreInTopK);
-            totalRecall += recall;
-            recallCount++;
-            return new RecallResult(recall);
-        }
+        // Calculate recall
+        float recall = calculateRecall(topDocs, expectedMinScoreInTopK);
+        totalRecall += recall;
+        recallCount++;
+        return new RecallResult(recall);
     }
 }

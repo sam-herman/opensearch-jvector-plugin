@@ -51,10 +51,11 @@ to OpenSearch vector search engines.
 For example: We have compared with the default Lucene HNSW graph implementation and noticed a significantly increasing latency benefits
 even from as small as 10,000 vectors datasets but exponentially increasing with the dataset size and further increasing by several order of magnitude 
 with the decrease in the Operating System File System cache (as is expected in RAM constrained environments)
-**Sample JMH engine output**
+**Sample JMH engine outputs**
 _Important note: JMH numbers are qualitative and relative and should not be treated as "globally consistent". 
 Or in other words, the numbers below only illustrate the relative ratio of performance difference and while they may vary across systems, the ratios should remain constant._
 
+RandomVectors:
 ```shell
 Benchmark                                               (codecType)  (dimension)  (numDocs)  Mode  Cnt  Score   Error  Units
 FormatBenchmarkRandomVectors.benchmarkSearch  jvector_not_quantized          128       1000  avgt    5  0.146 ± 0.002  ms/op
@@ -66,14 +67,63 @@ FormatBenchmarkRandomVectors.benchmarkSearch      jvector_quantized          128
 FormatBenchmarkRandomVectors.benchmarkSearch              Lucene101          128       1000  avgt    5  0.707 ± 0.016  ms/op
 FormatBenchmarkRandomVectors.benchmarkSearch              Lucene101          128      10000  avgt    5  1.578 ± 0.022  ms/op
 FormatBenchmarkRandomVectors.benchmarkSearch              Lucene101          128     100000  avgt    5  2.156 ± 0.080  ms/op
+
+Visualization:
+Benchmark: FormatBenchmarkRandomVectors.benchmarkSearch (dimension: 128)
+Grouped by Number of Documents (numDocs)
+Scaling: max bar width corresponds to 2.156 ms/op → 50 characters
+--------------------------------------------------------------------------------
+NumDocs: 1000
+------------------------------------------------------------
+Codec Type             Score (ms/op)    Visualization
+------------------------------------------------------------
+jvector_not_quantized  0.146 ms/op      |███
+jvector_quantized      0.147 ms/op      |███
+Lucene101              0.707 ms/op      |████████████████
+
+NumDocs: 10000
+------------------------------------------------------------
+Codec Type             Score (ms/op)    Visualization
+------------------------------------------------------------
+jvector_not_quantized  0.332 ms/op      |████████
+jvector_quantized      0.181 ms/op      |████
+Lucene101              1.578 ms/op      |█████████████████████████████████████
+
+NumDocs: 100000
+------------------------------------------------------------
+Codec Type             Score (ms/op)    Visualization
+------------------------------------------------------------
+jvector_not_quantized  0.451 ms/op      |██████████
+jvector_quantized      0.194 ms/op      |█████
+Lucene101              2.156 ms/op      |██████████████████████████████████████████████████
+--------------------------------------------------------------------------------
+---------------------------------------------------------------------------
 ```
 
-![img.png](img.png)
+
+sift-128-euclidean:
+```shell
+Benchmark                                                   (codecType)            (datasetName)  Mode  Cnt  Score   Error  Units
+FormatBenchmarkWithKnownDatasets.benchmarkSearch  jvector_not_quantized  sift-128-euclidean.hdf5  avgt    4  0.292 ± 0.002  ms/op
+FormatBenchmarkWithKnownDatasets.benchmarkSearch              Lucene101  sift-128-euclidean.hdf5  avgt    4  1.160 ± 0.015  ms/op
+
+JMH Benchmark Results
+Benchmark: FormatBenchmarkWithKnownDatasets.benchmarkSearch
+Dataset: sift-128-euclidean.hdf5
+
+Visualization:
+Codec Type            Avg Time (ms/op)   Visualization
+---------------------------------------------------------------
+jvector_not_quantized  0.292 ms/op       |█████████████                        
+Lucene101              1.160 ms/op       |██████████████████████████████████████████████████
+---------------------------------------------------------------
+```
 
 The numbers above were collected in an environment that all data was cached in either JVM or Operating System cache memory.
 And we can already see a significant difference in performance!
 
-When we are moving to a RAM constrained environment we will see an order of magnitude of difference:
+When we are moving to a RAM constrained environment we are expecting to see a significant difference of a number of orders of magnitude.
+For example if Lucene is doing 100x the number of disk reads compared to JVector, and the disk is 100x slower than RAM, then we can expect JVector to be 10,000x faster than Lucene in this scenario.
 
 
 
