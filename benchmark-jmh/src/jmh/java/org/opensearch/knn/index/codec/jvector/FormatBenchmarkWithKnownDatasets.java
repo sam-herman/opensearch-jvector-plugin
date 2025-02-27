@@ -163,14 +163,14 @@ public class FormatBenchmarkWithKnownDatasets {
         directory.close();
         // Cleanup previously created index directory
         Files.walk(indexDirectoryPath)
-                .sorted((path1, path2) -> path2.compareTo(path1)) // Reverse order to delete files before directories
-                .forEach(path -> {
-                    try {
-                        Files.delete(path);
-                    } catch (IOException e) {
-                        throw new UncheckedIOException("Failed to delete " + path, e);
-                    }
-                });
+            .sorted((path1, path2) -> path2.compareTo(path1)) // Reverse order to delete files before directories
+            .forEach(path -> {
+                try {
+                    Files.delete(path);
+                } catch (IOException e) {
+                    throw new UncheckedIOException("Failed to delete " + path, e);
+                }
+            });
     }
 
     @Benchmark
